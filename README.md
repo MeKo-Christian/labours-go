@@ -1,6 +1,6 @@
 # Labours-go
 
-Labours-go is a project aimed at replacing the Python implementation of Labours with a Go-based implementation for better performance, maintainability, and scalability. This repository contains the Go codebase and all the necessary tools to analyze and visualize contributions in Git repositories.
+Labours-go is a project aimed at replacing the Python implementation of [labours](https://github.com/src-d/hercules/tree/master/python/labours) with a Go-based implementation for better performance, maintainability, and scalability. This repository contains the Go codebase and all the necessary tools to analyze and visualize contributions in Git repositories.
 
 ## Features
 
