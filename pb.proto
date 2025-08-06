@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package pb;
+option go_package = "labours-go/internal/pb";
+
+// Main analysis result container
+message BurndownAnalysisResults {
+    CompressedSparseRowMatrix project = 1;
+    CompressedSparseRowMatrix files = 2;
+    CompressedSparseRowMatrix people = 3;
+    CompressedSparseRowMatrix people_interaction = 4;
+    FilesOwnership files_ownership = 5;
+    int32 tick_size = 6;
+}
+
+// Efficient sparse matrix representation using Compressed Sparse Row format
+message CompressedSparseRowMatrix {
+    int32 number_of_rows = 1;
+    int32 number_of_columns = 2;
+    repeated int64 data = 3;
+    repeated int32 indices = 4;
+    repeated int64 indptr = 5;
+}
+
+// File ownership data mapping file paths to developer indices
+message FilesOwnership {
+    map<string, int32> value = 1;
+}
+
+// Repository metadata
+message Metadata {
+    int32 version = 1;
+    string hash = 2;
+    string repository = 3;
+    int64 begin_unix_time = 4;
+    int64 end_unix_time = 5;
+    int32 commits = 6;
+    int64 run_time = 7;
+}
+
+// File coupling analysis results
+message CouplesAnalysisResults {
+    CompressedSparseRowMatrix file_couples = 1;
+    repeated string file_names = 2;
+}
+
+// Developer statistics
+message DeveloperStat {
+    string name = 1;
+    int32 commits = 2;
+    int64 lines_added = 3;
+    int64 lines_removed = 4;
+    int64 lines_modified = 5;
+    int32 files_touched = 6;
+    map<string, int32> languages = 7;
+}
+
+// Language statistics
+message LanguageStat {
+    string language = 1;
+    int64 lines = 2;
+}
+
+// Comprehensive analysis results that can contain multiple analysis types
+message AnalysisResults {
+    Metadata metadata = 1;
+    BurndownAnalysisResults burndown = 2;
+    CouplesAnalysisResults couples = 3;
+    repeated DeveloperStat developer_stats = 4;
+    repeated LanguageStat language_stats = 5;
+    repeated string people_names = 6;
+    repeated string file_names = 7;
+}

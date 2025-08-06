@@ -13,6 +13,7 @@ import (
 var modeHandlers = map[string]func(reader readers.Reader, output string, startTime, endTime *time.Time) error{
 	"burndown-project":  burndownProject,
 	"burndown-file":     burndownFile,
+	"burndown-person":   burndownPerson,
 	"overwrites-matrix": overwritesMatrix,
 	"ownership":         ownershipBurndown,
 	"couples-files":     couplesFiles,
@@ -25,6 +26,7 @@ var modeHandlers = map[string]func(reader readers.Reader, output string, startTi
 	"languages":         languages,
 	"devs-parallel":     devsParallel,
 	"run-times":         runTimes,
+	"sentiment":         sentiment,
 }
 
 func executeModes(modes []string, reader readers.Reader, output string, startTime, endTime *time.Time) {
@@ -50,6 +52,12 @@ func burndownFile(reader readers.Reader, output string, startTime, endTime *time
 	relative := viper.GetBool("relative")
 	resample := viper.GetString("resample")
 	return modes.BurndownFile(reader, output, relative, startTime, endTime, resample)
+}
+
+func burndownPerson(reader readers.Reader, output string, startTime, endTime *time.Time) error {
+	relative := viper.GetBool("relative")
+	resample := viper.GetString("resample")
+	return modes.BurndownPerson(reader, output, relative, startTime, endTime, resample)
 }
 
 func overwritesMatrix(reader readers.Reader, output string, startTime, endTime *time.Time) error {

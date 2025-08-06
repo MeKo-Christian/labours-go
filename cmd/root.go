@@ -42,6 +42,7 @@ func initializeFlags() {
 	rootCmd.PersistentFlags().Bool("disable-projector", false, "Disable TensorFlow projector on couples")
 	rootCmd.PersistentFlags().Int("max-people", 20, "Maximum number of developers in overwrites matrix and people plots.")
 	rootCmd.PersistentFlags().Bool("order-ownership-by-time", false, "Sort developers in the ownership plot by their first appearance in the history.")
+	rootCmd.PersistentFlags().Bool("sentiment", false, "Include sentiment analysis in the output (Python compatibility)")
 }
 
 func bindFlagsToViper() {
@@ -68,5 +69,12 @@ func runLaboursCommand(cmd *cobra.Command, args []string) {
 
 	reader := detectAndReadInput(input, inputFormat)
 	modes := resolveModes()
+	
+	// Handle Python compatibility: if --sentiment flag is set, add sentiment mode
+	if viper.GetBool("sentiment") {
+		modes = append(modes, "sentiment")
+		fmt.Println("Added sentiment analysis mode (--sentiment flag)")
+	}
+	
 	executeModes(modes, reader, viper.GetString("output"), startDate, endDate)
 }

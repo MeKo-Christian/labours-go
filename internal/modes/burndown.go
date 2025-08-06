@@ -70,55 +70,135 @@ func generateBurndownPlot(name string, matrix [][]int, output string, relative b
 	return nil
 }
 
-// ResampleDateRange creates a date range based on the given resampling interval.
+// resampleDateRange creates a date range based on the given resampling interval.
 func resampleDateRange(start, end time.Time, resample string) []time.Time {
-	var step time.Duration
+	var dates []time.Time
+	
 	switch resample {
 	case "year":
-		step = 365 * 24 * time.Hour
-	case "month":
-		step = 30 * 24 * time.Hour
-	case "day":
-		step = 24 * time.Hour
+		// Yearly samples - start of each year
+		for year := start.Year(); year <= end.Year(); year++ {
+			yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, start.Location())
+			if yearStart.After(end) {
+				break
+			}
+			if yearStart.After(start) || yearStart.Equal(start) {
+				dates = append(dates, yearStart)
+			}
+		}
+		
+	case "month", "M":
+		// Monthly samples - start of each month
+		current := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
+		if current.Before(start) {
+			current = current.AddDate(0, 1, 0)
+		}
+		
+		for current.Before(end) || current.Equal(end) {
+			dates = append(dates, current)
+			current = current.AddDate(0, 1, 0)
+		}
+		
+	case "week", "W":
+		// Weekly samples - start of each week (Monday)
+		// Find the first Monday on or after start
+		current := start
+		for current.Weekday() != time.Monday {
+			current = current.AddDate(0, 0, 1)
+		}
+		
+		for current.Before(end) || current.Equal(end) {
+			dates = append(dates, current)
+			current = current.AddDate(0, 0, 7)
+		}
+		
+	case "day", "D":
+		// Daily samples
+		for current := start; current.Before(end) || current.Equal(end); current = current.AddDate(0, 0, 1) {
+			dates = append(dates, current)
+		}
+		
 	default:
-		step = 24 * time.Hour
+		// Default to daily sampling
+		for current := start; current.Before(end) || current.Equal(end); current = current.AddDate(0, 0, 1) {
+			dates = append(dates, current)
+		}
 	}
-
-	var dates []time.Time
-	for t := start; t.Before(end); t = t.Add(step) {
-		dates = append(dates, t)
+	
+	// Ensure we have at least two points for interpolation
+	if len(dates) == 0 {
+		dates = append(dates, start, end)
+	} else if len(dates) == 1 {
+		if !dates[0].Equal(end) {
+			dates = append(dates, end)
+		}
 	}
+	
 	return dates
 }
 
-// interpolateBurndownMatrix interpolates the matrix and shows progress.
+// interpolateBurndownMatrix interpolates and resamples the matrix according to the specified interval
 func interpolateBurndownMatrix(matrix [][]int, startTime, endTime time.Time, resample string) ([][]float64, []time.Time) {
-	granularity := 1 // Assume 1-day granularity
-	sampling := 1    // Default to 1-day sampling for now
-	numBands := len(matrix)
-	numTicks := len(matrix[0])
-
-	// Calculate the total interpolated size
-	daily := make([][]float64, numBands*granularity)
-	for i := range daily {
-		daily[i] = make([]float64, numTicks*sampling)
+	if len(matrix) == 0 || len(matrix[0]) == 0 {
+		return [][]float64{}, []time.Time{}
 	}
 
-	dateRange := resampleDateRange(startTime, endTime, resample)
+	numBands := len(matrix)
+	originalTicks := len(matrix[0])
 
-	bar := progressbar.Default(int64(numBands), "Interpolating data")
-	for y := 0; y < numBands; y++ {
+	// Generate the target date range based on resampling
+	dateRange := resampleDateRange(startTime, endTime, resample)
+	targetTicks := len(dateRange)
+
+	// Create interpolated matrix
+	interpolated := make([][]float64, numBands)
+	for i := range interpolated {
+		interpolated[i] = make([]float64, targetTicks)
+	}
+
+	bar := progressbar.Default(int64(numBands), "Interpolating burndown data")
+	
+	// Interpolate each band (developer/file/etc)
+	for band := 0; band < numBands; band++ {
 		bar.Add(1)
-		for x := 0; x < numTicks; x++ {
-			for i := y * granularity; i < (y+1)*granularity; i++ {
-				for j := x * sampling; j < (x+1)*sampling; j++ {
-					daily[i][j] = float64(matrix[y][x])
-				}
+		
+		// If target resolution matches original, direct copy
+		if targetTicks == originalTicks {
+			for tick := 0; tick < originalTicks; tick++ {
+				interpolated[band][tick] = float64(matrix[band][tick])
 			}
+			continue
+		}
+
+		// Interpolate between original data points
+		for targetTick := 0; targetTick < targetTicks; targetTick++ {
+			// Map target tick to original tick space
+			originalPos := float64(targetTick) * float64(originalTicks-1) / float64(targetTicks-1)
+			
+			// Find surrounding original ticks
+			leftTick := int(originalPos)
+			rightTick := leftTick + 1
+			
+			// Handle boundary cases
+			if leftTick >= originalTicks-1 {
+				interpolated[band][targetTick] = float64(matrix[band][originalTicks-1])
+				continue
+			}
+			if rightTick >= originalTicks {
+				interpolated[band][targetTick] = float64(matrix[band][leftTick])
+				continue
+			}
+			
+			// Linear interpolation
+			fraction := originalPos - float64(leftTick)
+			leftValue := float64(matrix[band][leftTick])
+			rightValue := float64(matrix[band][rightTick])
+			
+			interpolated[band][targetTick] = leftValue + fraction*(rightValue-leftValue)
 		}
 	}
 
-	return daily, dateRange
+	return interpolated, dateRange
 }
 
 // calculateSurvivalRatios computes survival ratios for the matrix.
