@@ -61,6 +61,19 @@ message LanguageStat {
     int64 lines = 2;
 }
 
+// Shotness record for tracking structural unit modifications
+message ShotnessRecord {
+    string type = 1;      // Type of structural unit (e.g., "function", "class")
+    string name = 2;      // Name of the structural unit
+    string file = 3;      // File path containing the unit
+    map<int32, int32> counters = 4;  // Time-based modification counters
+}
+
+// Shotness analysis results
+message ShotnessAnalysisResults {
+    repeated ShotnessRecord records = 1;  // Collection of all shotness records
+}
+
 // Comprehensive analysis results that can contain multiple analysis types
 message AnalysisResults {
     Metadata metadata = 1;
@@ -70,4 +83,5 @@ message AnalysisResults {
     repeated LanguageStat language_stats = 5;
     repeated string people_names = 6;
     repeated string file_names = 7;
+    ShotnessAnalysisResults shotness = 8;
 }

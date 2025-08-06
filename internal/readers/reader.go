@@ -14,7 +14,7 @@ type Reader interface {
 	GetFileCooccurrence() ([]string, [][]int, error)
 	GetPeopleCooccurrence() ([]string, [][]int, error)
 	GetShotnessCooccurrence() ([]string, [][]int, error)
-	GetShotnessStats() ([][]int, error)
+	GetShotnessRecords() ([]ShotnessRecord, error)
 	GetDeveloperStats() ([]DeveloperStat, error)
 	GetLanguageStats() ([]LanguageStat, error)
 	GetRuntimeStats() (map[string]float64, error)
@@ -43,4 +43,11 @@ type DeveloperStat struct {
 type LanguageStat struct {
 	Language string
 	Lines    int
+}
+
+type ShotnessRecord struct {
+	Type     string            // Type of structural unit (e.g., "function", "class")
+	Name     string            // Name of the structural unit
+	File     string            // File path containing the unit
+	Counters map[int32]int32   // Time-based modification counters
 }

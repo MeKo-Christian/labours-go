@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
+	"labours-go/internal/graphics"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,21 +63,124 @@ func initConfig() {
 	} else {
 		fmt.Println("No configuration file found, using defaults.")
 	}
+
+	// Load user themes from standard directories
+	if err := graphics.LoadUserThemes(); err != nil {
+		fmt.Printf("Warning: failed to load user themes: %v\n", err)
+	}
 }
 
 func runLaboursCommand(cmd *cobra.Command, args []string) {
+	// Handle theme-specific commands first
+	if viper.GetBool("list-themes") {
+		listThemes()
+		return
+	}
+
+	if exportTheme := viper.GetString("export-theme"); exportTheme != "" {
+		handleExportTheme(exportTheme)
+		return
+	}
+
+	// Load custom theme if specified
+	if loadTheme := viper.GetString("load-theme"); loadTheme != "" {
+		if err := graphics.GlobalThemeManager.LoadThemeFromFile(loadTheme); err != nil {
+			fmt.Printf("Failed to load custom theme: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	// Set the selected theme
+	themeName := viper.GetString("theme")
+	if err := graphics.SetTheme(themeName); err != nil {
+		fmt.Printf("Failed to set theme '%s': %v\n", themeName, err)
+		fmt.Printf("Available themes: %v\n", graphics.ListThemes())
+		os.Exit(1)
+	}
+
+	// Handle hercules integration if --from-repo is specified
+	if repoPath := viper.GetString("from-repo"); repoPath != "" {
+		handleHerculesIntegration(repoPath)
+		return
+	}
+
 	input, inputFormat := viper.GetString("input"), viper.GetString("input-format")
 	startDate, endDate := parseDates()
 	validateDateRange(startDate, endDate)
 
 	reader := detectAndReadInput(input, inputFormat)
 	modes := resolveModes()
-	
+
 	// Handle Python compatibility: if --sentiment flag is set, add sentiment mode
 	if viper.GetBool("sentiment") {
 		modes = append(modes, "sentiment")
 		fmt.Println("Added sentiment analysis mode (--sentiment flag)")
 	}
-	
+
 	executeModes(modes, reader, viper.GetString("output"), startDate, endDate)
+}
+
+func listThemes() {
+	fmt.Println("Available themes:")
+	for _, theme := range graphics.ListThemes() {
+		fmt.Printf("  - %s\n", theme)
+	}
+}
+
+func handleExportTheme(themeName string) {
+	outputPath := fmt.Sprintf("%s-theme.yaml", themeName)
+	if err := graphics.GlobalThemeManager.ExportTheme(themeName, outputPath); err != nil {
+		fmt.Printf("Failed to export theme '%s': %v\n", themeName, err)
+		os.Exit(1)
+	}
+	fmt.Printf("Theme '%s' exported to %s\n", themeName, outputPath)
+}
+
+func handleHerculesIntegration(repoPath string) {
+	// Auto-detect hercules binary
+	herculesPath := viper.GetString("hercules")
+	if herculesPath == "" {
+		// Try common locations
+		candidates := []string{
+			"hercules",
+			"./hercules",
+			"/usr/local/bin/hercules",
+			"/home/christian/Code/hercules/hercules",
+		}
+
+		for _, candidate := range candidates {
+			if isExecutable(candidate) {
+				herculesPath = candidate
+				break
+			}
+		}
+
+		if herculesPath == "" {
+			fmt.Println("Error: hercules binary not found. Please install hercules or specify path with --hercules flag")
+			os.Exit(1)
+		}
+	}
+
+	fmt.Printf("Using hercules: %s\n", herculesPath)
+	fmt.Printf("Analyzing repository: %s\n", repoPath)
+
+	// Check if repository exists and is a git repo
+	if !isGitRepository(repoPath) {
+		fmt.Printf("Error: %s is not a git repository\n", repoPath)
+		os.Exit(1)
+	}
+
+	modes := resolveModes()
+	if len(modes) == 0 {
+		modes = []string{"burndown-project", "devs"} // default modes
+	}
+
+	// Map labours-go modes to hercules analysis
+	herculesAnalyses := mapModesToHerculesAnalyses(modes)
+
+	for _, analysis := range herculesAnalyses {
+		if err := runHerculesAndVisualize(herculesPath, repoPath, analysis); err != nil {
+			fmt.Printf("Error running analysis '%s': %v\n", analysis, err)
+		}
+	}
 }

@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
+	"labours-go/internal/progress"
 )
 
 type YamlReader struct {
@@ -14,10 +16,20 @@ type YamlReader struct {
 }
 
 func (r *YamlReader) Read(file io.Reader) error {
+	// Initialize progress tracking for YAML reading
+	quiet := viper.GetBool("quiet")
+	progEstimator := progress.NewProgressEstimator(!quiet)
+	
+	progEstimator.StartOperation("Reading YAML data", 1)
+	
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(&r.data); err != nil {
+		progEstimator.FinishOperation()
 		return fmt.Errorf("error decoding YAML: %v", err)
 	}
+	
+	progEstimator.UpdateProgress(1)
+	progEstimator.FinishOperation()
 	return nil
 }
 
@@ -189,21 +201,72 @@ func (r *YamlReader) GetShotnessCooccurrence() ([]string, [][]int, error) {
 	return names, matrix, nil
 }
 
-func (r *YamlReader) GetShotnessStats() ([][]int, error) {
-	shotnessData, ok := r.data["Shotness"].([]map[string]interface{})
+func (r *YamlReader) GetShotnessRecords() ([]ShotnessRecord, error) {
+	shotnessData, ok := r.data["Shotness"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("missing Shotness data in YAML")
+		return []ShotnessRecord{}, fmt.Errorf("missing Shotness data in YAML")
 	}
 
-	var stats [][]int
-	for _, record := range shotnessData {
-		row := make([]int, len(record["counters"].(map[string]int)))
-		for _, value := range record["counters"].(map[string]int) {
-			row = append(row, value)
+	var records []ShotnessRecord
+	for _, recordInterface := range shotnessData {
+		record, ok := recordInterface.(map[string]interface{})
+		if !ok {
+			continue // Skip invalid records
 		}
-		stats = append(stats, row)
+		
+		counters := make(map[int32]int32)
+		if countData, ok := record["counters"].(map[interface{}]interface{}); ok {
+			for timeKey, count := range countData {
+				// Convert time key and count to int32
+				var timeInt int32
+				var countInt int32
+				
+				switch t := timeKey.(type) {
+				case int:
+					timeInt = int32(t)
+				case int32:
+					timeInt = t
+				case int64:
+					timeInt = int32(t)
+				default:
+					continue // Skip invalid time keys
+				}
+				
+				switch c := count.(type) {
+				case int:
+					countInt = int32(c)
+				case int32:
+					countInt = c
+				case int64:
+					countInt = int32(c)
+				default:
+					continue // Skip invalid counts
+				}
+				
+				counters[timeInt] = countInt
+			}
+		}
+
+		// Safely extract string values
+		var recordType, recordName, recordFile string
+		if t, ok := record["type"].(string); ok {
+			recordType = t
+		}
+		if n, ok := record["name"].(string); ok {
+			recordName = n
+		}
+		if f, ok := record["file"].(string); ok {
+			recordFile = f
+		}
+
+		records = append(records, ShotnessRecord{
+			Type:     recordType,
+			Name:     recordName,
+			File:     recordFile,
+			Counters: counters,
+		})
 	}
-	return stats, nil
+	return records, nil
 }
 
 func (r *YamlReader) GetDeveloperStats() ([]DeveloperStat, error) {

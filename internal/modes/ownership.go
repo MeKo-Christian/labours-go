@@ -9,28 +9,44 @@ import (
 	"sort"
 	"time"
 
+	"github.com/spf13/viper"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
 	"labours-go/internal/graphics"
+	"labours-go/internal/progress"
 	"labours-go/internal/readers"
 )
 
 func OwnershipBurndown(reader readers.Reader, output string) error {
-	// Validate output path
+	// Initialize progress tracking
+	quiet := viper.GetBool("quiet")
+	progEstimator := progress.NewProgressEstimator(!quiet)
+	
+	// Start multi-phase operation for ownership analysis
+	totalPhases := 4 // validation, data extraction, processing, visualization
+	progEstimator.StartMultiOperation(totalPhases, "Ownership Burndown Analysis")
+
+	// Phase 1: Validate output path
+	progEstimator.NextOperation("Validating output path")
 	if output == "" {
 		output = "ownership.png"
-		fmt.Printf("Output not provided, using default: %s\n", output)
+		if !quiet {
+			fmt.Printf("Output not provided, using default: %s\n", output)
+		}
 	}
 
 	outputDir := filepath.Dir(output)
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("failed to create output directory %s: %v", outputDir, err)
 	}
 
-	// Step 1: Extract data from the reader
+	// Phase 2: Extract data from the reader
+	progEstimator.NextOperation("Extracting ownership data")
 	peopleSequence, ownershipData, err := reader.GetOwnershipBurndown()
 	if err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("failed to get ownership burndown data: %v", err)
 	}
 
@@ -39,23 +55,32 @@ func OwnershipBurndown(reader readers.Reader, output string) error {
 	startTime := time.Unix(0, 0) // Placeholder for start time; replace with actual value if needed
 	lastTime := startTime.Add(time.Duration(len(ownershipData[peopleSequence[0]][0])*sampling) * 24 * time.Hour)
 
-	// Step 2: Process the data
+	// Phase 3: Process the data
+	progEstimator.NextOperation("Processing ownership data")
 	maxPeople := 20      // Maximum number of people to display
 	orderByTime := false // Sort developers by their first appearance
-	names, peopleMatrix, dateRange := processOwnershipBurndown(
-		startTime, lastTime, sampling, peopleSequence, ownershipData, maxPeople, orderByTime)
+	names, peopleMatrix, dateRange := processOwnershipBurndownWithProgress(
+		startTime, lastTime, sampling, peopleSequence, ownershipData, maxPeople, orderByTime, progEstimator)
 
-	// Step 3: Check if JSON output is required
+	// Phase 4: Generate output
+	progEstimator.NextOperation("Generating visualization")
+	
+	// Check if JSON output is required
 	if filepath.Ext(output) == ".json" {
+		progEstimator.FinishMultiOperation()
 		return saveOwnershipBurndownAsJSON(output, names, peopleMatrix, dateRange, lastTime)
 	}
 
-	// Step 4: Visualize the data
+	// Visualize the data
 	if err := plotOwnershipBurndown(names, peopleMatrix, dateRange, lastTime, output); err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("failed to plot ownership burndown: %v", err)
 	}
 
-	fmt.Println("Ownership burndown chart generated successfully.")
+	progEstimator.FinishMultiOperation()
+	if !quiet {
+		fmt.Println("Ownership burndown chart generated successfully.")
+	}
 	return nil
 }
 
@@ -139,6 +164,99 @@ func processOwnershipBurndown(
 		sequence = reorderStrings(sequence, indices)
 	}
 
+	return sequence, people, dateRange
+}
+
+// processOwnershipBurndownWithProgress processes ownership data with progress tracking
+func processOwnershipBurndownWithProgress(
+	start, last time.Time, sampling int,
+	sequence []string, data map[string][][]int,
+	maxPeople int, orderByTime bool,
+	progEstimator *progress.ProgressEstimator,
+) ([]string, [][]float64, []time.Time) {
+	// Start detailed progress for data processing
+	totalSteps := len(sequence) + 2 // aggregation steps + sorting + date range creation
+	progEstimator.StartOperation("Aggregating ownership data", totalSteps)
+	
+	// Aggregate the ownership data
+	people := make([][]float64, len(sequence))
+	for i, name := range sequence {
+		progEstimator.UpdateProgress(1)
+		rows := data[name]
+		total := make([]float64, len(rows[0]))
+		for _, row := range rows {
+			for j, val := range row {
+				total[j] += float64(val)
+			}
+		}
+		people[i] = total
+	}
+
+	// Create a date range based on sampling
+	progEstimator.UpdateProgress(1)
+	dateRange := make([]time.Time, len(people[0]))
+	for i := 0; i < len(dateRange); i++ {
+		dateRange[i] = start.Add(time.Duration(i*sampling) * time.Hour * 24)
+	}
+
+	// Truncate to maxPeople
+	if len(people) > maxPeople {
+		sums := make([]float64, len(people))
+		for i, row := range people {
+			for _, val := range row {
+				sums[i] += val
+			}
+		}
+
+		indices := argsortDescending(sums)
+		chosen := indices[:maxPeople]
+		others := indices[maxPeople:]
+
+		// Aggregate "others"
+		othersTotal := make([]float64, len(people[0]))
+		for _, idx := range others {
+			for j, val := range people[idx] {
+				othersTotal[j] += val
+			}
+		}
+
+		// Update people and sequence
+		truncatedPeople := make([][]float64, maxPeople+1)
+		truncatedNames := make([]string, maxPeople+1)
+		for i, idx := range chosen {
+			truncatedPeople[i] = people[idx]
+			truncatedNames[i] = sequence[idx]
+		}
+		truncatedPeople[maxPeople] = othersTotal
+		truncatedNames[maxPeople] = "others"
+
+		people = truncatedPeople
+		sequence = truncatedNames
+	}
+
+	// Sort by first appearance or total ownership
+	progEstimator.UpdateProgress(1)
+	if orderByTime {
+		appearances := make([]int, len(people))
+		for i, row := range people {
+			appearances[i] = findFirstNonZero(row)
+		}
+		indices := argsortAscending(appearances)
+		people = reorder(people, indices)
+		sequence = reorderStrings(sequence, indices)
+	} else {
+		totalOwnership := make([]float64, len(people))
+		for i, row := range people {
+			for _, val := range row {
+				totalOwnership[i] += val
+			}
+		}
+		indices := argsortDescending(totalOwnership)
+		people = reorder(people, indices)
+		sequence = reorderStrings(sequence, indices)
+	}
+
+	progEstimator.FinishOperation()
 	return sequence, people, dateRange
 }
 

@@ -520,6 +520,120 @@ func (x *LanguageStat) GetLines() int64 {
 	return 0
 }
 
+// Shotness record for tracking structural unit modifications
+type ShotnessRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`                                                                                     // Type of structural unit (e.g., "function", "class")
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                                                     // Name of the structural unit
+	File          string                 `protobuf:"bytes,3,opt,name=file,proto3" json:"file,omitempty"`                                                                                     // File path containing the unit
+	Counters      map[int32]int32        `protobuf:"bytes,4,rep,name=counters,proto3" json:"counters,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // Time-based modification counters
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShotnessRecord) Reset() {
+	*x = ShotnessRecord{}
+	mi := &file_pb_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShotnessRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShotnessRecord) ProtoMessage() {}
+
+func (x *ShotnessRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShotnessRecord.ProtoReflect.Descriptor instead.
+func (*ShotnessRecord) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ShotnessRecord) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ShotnessRecord) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ShotnessRecord) GetFile() string {
+	if x != nil {
+		return x.File
+	}
+	return ""
+}
+
+func (x *ShotnessRecord) GetCounters() map[int32]int32 {
+	if x != nil {
+		return x.Counters
+	}
+	return nil
+}
+
+// Shotness analysis results
+type ShotnessAnalysisResults struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Records       []*ShotnessRecord      `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"` // Collection of all shotness records
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShotnessAnalysisResults) Reset() {
+	*x = ShotnessAnalysisResults{}
+	mi := &file_pb_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShotnessAnalysisResults) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShotnessAnalysisResults) ProtoMessage() {}
+
+func (x *ShotnessAnalysisResults) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShotnessAnalysisResults.ProtoReflect.Descriptor instead.
+func (*ShotnessAnalysisResults) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ShotnessAnalysisResults) GetRecords() []*ShotnessRecord {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
 // Comprehensive analysis results that can contain multiple analysis types
 type AnalysisResults struct {
 	state          protoimpl.MessageState   `protogen:"open.v1"`
@@ -530,13 +644,14 @@ type AnalysisResults struct {
 	LanguageStats  []*LanguageStat          `protobuf:"bytes,5,rep,name=language_stats,json=languageStats,proto3" json:"language_stats,omitempty"`
 	PeopleNames    []string                 `protobuf:"bytes,6,rep,name=people_names,json=peopleNames,proto3" json:"people_names,omitempty"`
 	FileNames      []string                 `protobuf:"bytes,7,rep,name=file_names,json=fileNames,proto3" json:"file_names,omitempty"`
+	Shotness       *ShotnessAnalysisResults `protobuf:"bytes,8,opt,name=shotness,proto3" json:"shotness,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AnalysisResults) Reset() {
 	*x = AnalysisResults{}
-	mi := &file_pb_proto_msgTypes[7]
+	mi := &file_pb_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -548,7 +663,7 @@ func (x *AnalysisResults) String() string {
 func (*AnalysisResults) ProtoMessage() {}
 
 func (x *AnalysisResults) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[7]
+	mi := &file_pb_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -561,7 +676,7 @@ func (x *AnalysisResults) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalysisResults.ProtoReflect.Descriptor instead.
 func (*AnalysisResults) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{7}
+	return file_pb_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AnalysisResults) GetMetadata() *Metadata {
@@ -609,6 +724,13 @@ func (x *AnalysisResults) GetPeopleNames() []string {
 func (x *AnalysisResults) GetFileNames() []string {
 	if x != nil {
 		return x.FileNames
+	}
+	return nil
+}
+
+func (x *AnalysisResults) GetShotness() *ShotnessAnalysisResults {
+	if x != nil {
+		return x.Shotness
 	}
 	return nil
 }
@@ -665,7 +787,17 @@ const file_pb_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"@\n" +
 	"\fLanguageStat\x12\x1a\n" +
 	"\blanguage\x18\x01 \x01(\tR\blanguage\x12\x14\n" +
-	"\x05lines\x18\x02 \x01(\x03R\x05lines\"\xe1\x02\n" +
+	"\x05lines\x18\x02 \x01(\x03R\x05lines\"\xc7\x01\n" +
+	"\x0eShotnessRecord\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04file\x18\x03 \x01(\tR\x04file\x12<\n" +
+	"\bcounters\x18\x04 \x03(\v2 .pb.ShotnessRecord.CountersEntryR\bcounters\x1a;\n" +
+	"\rCountersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"G\n" +
+	"\x17ShotnessAnalysisResults\x12,\n" +
+	"\arecords\x18\x01 \x03(\v2\x12.pb.ShotnessRecordR\arecords\"\x9a\x03\n" +
 	"\x0fAnalysisResults\x12(\n" +
 	"\bmetadata\x18\x01 \x01(\v2\f.pb.MetadataR\bmetadata\x127\n" +
 	"\bburndown\x18\x02 \x01(\v2\x1b.pb.BurndownAnalysisResultsR\bburndown\x124\n" +
@@ -674,7 +806,8 @@ const file_pb_proto_rawDesc = "" +
 	"\x0elanguage_stats\x18\x05 \x03(\v2\x10.pb.LanguageStatR\rlanguageStats\x12!\n" +
 	"\fpeople_names\x18\x06 \x03(\tR\vpeopleNames\x12\x1d\n" +
 	"\n" +
-	"file_names\x18\a \x03(\tR\tfileNamesB\x18Z\x16labours-go/internal/pbb\x06proto3"
+	"file_names\x18\a \x03(\tR\tfileNames\x127\n" +
+	"\bshotness\x18\b \x01(\v2\x1b.pb.ShotnessAnalysisResultsR\bshotnessB\x18Z\x16labours-go/internal/pbb\x06proto3"
 
 var (
 	file_pb_proto_rawDescOnce sync.Once
@@ -688,7 +821,7 @@ func file_pb_proto_rawDescGZIP() []byte {
 	return file_pb_proto_rawDescData
 }
 
-var file_pb_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_pb_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_pb_proto_goTypes = []any{
 	(*BurndownAnalysisResults)(nil),   // 0: pb.BurndownAnalysisResults
 	(*CompressedSparseRowMatrix)(nil), // 1: pb.CompressedSparseRowMatrix
@@ -697,9 +830,12 @@ var file_pb_proto_goTypes = []any{
 	(*CouplesAnalysisResults)(nil),    // 4: pb.CouplesAnalysisResults
 	(*DeveloperStat)(nil),             // 5: pb.DeveloperStat
 	(*LanguageStat)(nil),              // 6: pb.LanguageStat
-	(*AnalysisResults)(nil),           // 7: pb.AnalysisResults
-	nil,                               // 8: pb.FilesOwnership.ValueEntry
-	nil,                               // 9: pb.DeveloperStat.LanguagesEntry
+	(*ShotnessRecord)(nil),            // 7: pb.ShotnessRecord
+	(*ShotnessAnalysisResults)(nil),   // 8: pb.ShotnessAnalysisResults
+	(*AnalysisResults)(nil),           // 9: pb.AnalysisResults
+	nil,                               // 10: pb.FilesOwnership.ValueEntry
+	nil,                               // 11: pb.DeveloperStat.LanguagesEntry
+	nil,                               // 12: pb.ShotnessRecord.CountersEntry
 }
 var file_pb_proto_depIdxs = []int32{
 	1,  // 0: pb.BurndownAnalysisResults.project:type_name -> pb.CompressedSparseRowMatrix
@@ -707,19 +843,22 @@ var file_pb_proto_depIdxs = []int32{
 	1,  // 2: pb.BurndownAnalysisResults.people:type_name -> pb.CompressedSparseRowMatrix
 	1,  // 3: pb.BurndownAnalysisResults.people_interaction:type_name -> pb.CompressedSparseRowMatrix
 	2,  // 4: pb.BurndownAnalysisResults.files_ownership:type_name -> pb.FilesOwnership
-	8,  // 5: pb.FilesOwnership.value:type_name -> pb.FilesOwnership.ValueEntry
+	10, // 5: pb.FilesOwnership.value:type_name -> pb.FilesOwnership.ValueEntry
 	1,  // 6: pb.CouplesAnalysisResults.file_couples:type_name -> pb.CompressedSparseRowMatrix
-	9,  // 7: pb.DeveloperStat.languages:type_name -> pb.DeveloperStat.LanguagesEntry
-	3,  // 8: pb.AnalysisResults.metadata:type_name -> pb.Metadata
-	0,  // 9: pb.AnalysisResults.burndown:type_name -> pb.BurndownAnalysisResults
-	4,  // 10: pb.AnalysisResults.couples:type_name -> pb.CouplesAnalysisResults
-	5,  // 11: pb.AnalysisResults.developer_stats:type_name -> pb.DeveloperStat
-	6,  // 12: pb.AnalysisResults.language_stats:type_name -> pb.LanguageStat
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	11, // 7: pb.DeveloperStat.languages:type_name -> pb.DeveloperStat.LanguagesEntry
+	12, // 8: pb.ShotnessRecord.counters:type_name -> pb.ShotnessRecord.CountersEntry
+	7,  // 9: pb.ShotnessAnalysisResults.records:type_name -> pb.ShotnessRecord
+	3,  // 10: pb.AnalysisResults.metadata:type_name -> pb.Metadata
+	0,  // 11: pb.AnalysisResults.burndown:type_name -> pb.BurndownAnalysisResults
+	4,  // 12: pb.AnalysisResults.couples:type_name -> pb.CouplesAnalysisResults
+	5,  // 13: pb.AnalysisResults.developer_stats:type_name -> pb.DeveloperStat
+	6,  // 14: pb.AnalysisResults.language_stats:type_name -> pb.LanguageStat
+	8,  // 15: pb.AnalysisResults.shotness:type_name -> pb.ShotnessAnalysisResults
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_pb_proto_init() }
@@ -733,7 +872,7 @@ func file_pb_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pb_proto_rawDesc), len(file_pb_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

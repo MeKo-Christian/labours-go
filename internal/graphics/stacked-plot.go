@@ -6,10 +6,11 @@ import (
 	"math"
 	"time"
 
+	"github.com/spf13/viper"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
+	"labours-go/internal/progress"
 )
 
 // PlotStackedBurndown generates a proper stacked area chart for burndown analysis
@@ -18,7 +19,16 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 		return fmt.Errorf("empty matrix or date range")
 	}
 
-	// Create plot
+	// Initialize progress tracking for chart generation
+	quiet := viper.GetBool("quiet")
+	progEstimator := progress.NewProgressEstimator(!quiet)
+	
+	// Start multi-phase chart generation
+	totalPhases := 4 // setup, data processing, plotting, saving
+	progEstimator.StartMultiOperation(totalPhases, "Chart Generation")
+
+	// Phase 1: Setup and validation
+	progEstimator.NextOperation("Setting up plot")
 	p := plot.New()
 	p.Title.Text = "Burndown Chart"
 	p.X.Label.Text = "Time"
@@ -26,10 +36,14 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 	if relative {
 		p.Y.Label.Text = "Relative Fraction"
 	}
+	
+	// Apply theme styling
+	applyThemeToPlot(p)
 
 	// Ensure matrix dimensions are consistent
 	numSeries := len(matrix)
 	if numSeries == 0 {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("empty matrix")
 	}
 
@@ -41,6 +55,9 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 		dateRange = dateRange[:minLen]
 	}
 
+	// Phase 2: Data processing
+	progEstimator.NextOperation("Processing chart data")
+	
 	// Convert dates to float64 for plotting (Unix timestamps)
 	timeValues := make([]float64, numPoints)
 	for i, date := range dateRange {
@@ -59,8 +76,11 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 		}
 	}
 
-	// Color palette for different series
-	colors := generateColorPalette(numSeries)
+	// Color palette for different series - use theme colors
+	colors := generateColorPaletteFromTheme(numSeries)
+
+	// Phase 3: Creating plot layers
+	progEstimator.NextOperation("Creating plot layers")
 
 	// Create stacked areas (bottom to top)
 	for i := numSeries - 1; i >= 0; i-- {
@@ -98,13 +118,17 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 		p.X.Max = timeValues[len(timeValues)-1]
 	}
 
-	// Save the plot
+	// Phase 4: Saving chart
+	progEstimator.NextOperation("Saving chart")
+	
 	width := 12 * vg.Inch
 	height := 8 * vg.Inch
 	if err := p.Save(width, height, output); err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("failed to save plot to %s: %v", output, err)
 	}
 
+	progEstimator.FinishMultiOperation()
 	return nil
 }
 
@@ -148,7 +172,34 @@ func addStackedLayer(p *plot.Plot, top, bottom plotter.XYs, fillColor color.Colo
 	return nil
 }
 
-// generateColorPalette creates a set of distinct colors for the chart
+// generateColorPaletteFromTheme creates a set of distinct colors from the current theme
+func generateColorPaletteFromTheme(n int) []color.Color {
+	if n <= 0 {
+		return []color.Color{}
+	}
+
+	themePalette := CurrentTheme.GetColorPalette()
+	opacity := uint8(float64(255) * CurrentTheme.Chart.FillOpacity)
+	
+	colors := make([]color.Color, n)
+	for i := 0; i < n; i++ {
+		if i < len(themePalette) {
+			// Use theme color with chart opacity
+			if rgba, ok := themePalette[i].(color.RGBA); ok {
+				colors[i] = color.RGBA{R: rgba.R, G: rgba.G, B: rgba.B, A: opacity}
+			} else {
+				colors[i] = themePalette[i]
+			}
+		} else {
+			// Generate additional colors using HSV if we need more than theme provides
+			colors[i] = generateHSVColorWithOpacity(i, n, opacity)
+		}
+	}
+
+	return colors
+}
+
+// generateColorPalette creates a set of distinct colors for the chart (legacy function)
 func generateColorPalette(n int) []color.Color {
 	if n <= 0 {
 		return []color.Color{}
@@ -283,6 +334,9 @@ func PlotBarChart(values []float64, labels []string, output string, title string
 	p := plot.New()
 	p.Title.Text = title
 	p.Y.Label.Text = "Value"
+	
+	// Apply theme styling
+	applyThemeToPlot(p)
 
 	// Create bar chart data
 	bars := make(plotter.Values, len(values))
@@ -296,7 +350,7 @@ func PlotBarChart(values []float64, labels []string, output string, title string
 		return fmt.Errorf("error creating bar chart: %v", err)
 	}
 
-	barChart.Color = plotutil.Color(0)
+	barChart.Color = GetColor(0)
 	p.Add(barChart)
 
 	// Set custom x-axis labels
@@ -308,4 +362,72 @@ func PlotBarChart(values []float64, labels []string, output string, title string
 	}
 
 	return nil
+}
+
+// applyThemeToPlot applies the current theme's styling to a plot
+func applyThemeToPlot(p *plot.Plot) {
+	// Apply text styling
+	if CurrentTheme.Text.TitleSize > 0 {
+		p.Title.TextStyle.Font.Size = vg.Points(CurrentTheme.Text.TitleSize)
+	}
+	p.Title.TextStyle.Color = CurrentTheme.Text.Color.ToColor()
+	
+	// Apply axis styling
+	p.X.Label.TextStyle.Font.Size = vg.Points(CurrentTheme.Text.LabelSize)
+	p.X.Label.TextStyle.Color = CurrentTheme.Text.Color.ToColor()
+	p.Y.Label.TextStyle.Font.Size = vg.Points(CurrentTheme.Text.LabelSize)
+	p.Y.Label.TextStyle.Color = CurrentTheme.Text.Color.ToColor()
+	
+	// Apply background color
+	p.BackgroundColor = CurrentTheme.Background.ToColor()
+	
+	// Apply grid styling
+	if CurrentTheme.Grid.Show {
+		// Enable grid lines
+		p.Add(plotter.NewGrid())
+	}
+	
+	// Apply legend styling if enabled
+	if CurrentTheme.Chart.LegendShow {
+		p.Legend.TextStyle.Font.Size = vg.Points(CurrentTheme.Text.Size)
+		p.Legend.TextStyle.Color = CurrentTheme.Text.Color.ToColor()
+	}
+}
+
+// generateHSVColorWithOpacity generates colors using HSV color space with custom opacity
+func generateHSVColorWithOpacity(index, total int, opacity uint8) color.Color {
+	// Use golden angle for better color distribution
+	goldenAngle := 137.508 // degrees
+	hue := math.Mod(float64(index)*goldenAngle, 360)
+
+	// Convert HSV to RGB
+	saturation := 0.7
+	value := 0.9
+
+	c := value * saturation
+	x := c * (1 - math.Abs(math.Mod(hue/60, 2)-1))
+	m := value - c
+
+	var r, g, b float64
+	switch {
+	case hue < 60:
+		r, g, b = c, x, 0
+	case hue < 120:
+		r, g, b = x, c, 0
+	case hue < 180:
+		r, g, b = 0, c, x
+	case hue < 240:
+		r, g, b = 0, x, c
+	case hue < 300:
+		r, g, b = x, 0, c
+	default:
+		r, g, b = c, 0, x
+	}
+
+	return color.RGBA{
+		R: uint8((r + m) * 255),
+		G: uint8((g + m) * 255),
+		B: uint8((b + m) * 255),
+		A: opacity,
+	}
 }

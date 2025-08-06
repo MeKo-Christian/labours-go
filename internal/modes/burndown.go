@@ -6,30 +6,46 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/schollz/progressbar/v3"
+	"github.com/spf13/viper"
 	"labours-go/internal/graphics"
+	"labours-go/internal/progress"
 )
 
 // generateBurndownPlot creates the burndown plot with stacking, resampling, and survival ratio output.
 func generateBurndownPlot(name string, matrix [][]int, output string, relative bool, startTime, endTime *time.Time, resample string) error {
 	fmt.Println("Running: burndown-project")
 
-	// Validate output path
+	// Initialize progress tracking
+	quiet := viper.GetBool("quiet")
+	progEstimator := progress.NewProgressEstimator(!quiet)
+	
+	// Start multi-phase operation
+	totalPhases := 4 // validation, resampling, interpolation, plotting
+	progEstimator.StartMultiOperation(totalPhases, "Burndown Analysis")
+
+	// Phase 1: Validation and setup
+	progEstimator.NextOperation("Validating output path")
 	if output == "" {
 		output = fmt.Sprintf("burndown_%s.png", name)
-		fmt.Printf("Output not provided, using default: %s\n", output)
+		if !quiet {
+			fmt.Printf("Output not provided, using default: %s\n", output)
+		}
 	}
 
 	outputDir := filepath.Dir(output)
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("failed to create output directory %s: %v", outputDir, err)
 	}
 
-	// Resampling logic
+	// Phase 2: Resampling setup
+	progEstimator.NextOperation("Setting up resampling")
 	if resample == "" {
 		resample = "year"
 	}
-	fmt.Printf("resampling to %s, please wait...\n", resample)
+	if !quiet {
+		fmt.Printf("resampling to %s, please wait...\n", resample)
+	}
 
 	// Use default endTime if not provided
 	if endTime == nil {
@@ -49,12 +65,18 @@ func generateBurndownPlot(name string, matrix [][]int, output string, relative b
 		startTime = &earliest
 	}
 
-	// Interpolation with progress bar
-	interpolatedMatrix, dateRange := interpolateBurndownMatrix(matrix, *startTime, *endTime, resample)
+	// Phase 3: Interpolation with enhanced progress tracking
+	progEstimator.NextOperation("Interpolating burndown data")
+	interpolatedMatrix, dateRange := interpolateBurndownMatrixWithProgress(matrix, *startTime, *endTime, resample, progEstimator)
 
+	// Phase 4: Final processing and visualization
+	progEstimator.NextOperation("Generating visualization")
+	
 	// Survival analysis
 	survivalRatios := calculateSurvivalRatios(interpolatedMatrix, *startTime)
-	printSurvivalRatios(survivalRatios)
+	if !quiet {
+		printSurvivalRatios(survivalRatios)
+	}
 
 	// Normalize if relative is true
 	if relative {
@@ -63,10 +85,14 @@ func generateBurndownPlot(name string, matrix [][]int, output string, relative b
 
 	// Create plot
 	if err := graphics.PlotStackedBurndown(interpolatedMatrix, dateRange, output, relative); err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("error creating burndown plot: %v", err)
 	}
 
-	fmt.Printf("Chart saved to %s\n", output)
+	progEstimator.FinishMultiOperation()
+	if !quiet {
+		fmt.Printf("Chart saved to %s\n", output)
+	}
 	return nil
 }
 
@@ -156,11 +182,14 @@ func interpolateBurndownMatrix(matrix [][]int, startTime, endTime time.Time, res
 		interpolated[i] = make([]float64, targetTicks)
 	}
 
-	bar := progressbar.Default(int64(numBands), "Interpolating burndown data")
+	// Note: This function is kept for compatibility but interpolateBurndownMatrixWithProgress is preferred
+	// Create a basic progress estimator for backward compatibility
+	progEstimator := progress.NewProgressEstimator(!viper.GetBool("quiet"))
+	progEstimator.StartOperation("Interpolating burndown data", numBands)
 
 	// Interpolate each band (developer/file/etc)
 	for band := 0; band < numBands; band++ {
-		bar.Add(1)
+		progEstimator.UpdateProgress(1)
 
 		// If target resolution matches original, direct copy
 		if targetTicks == originalTicks {
@@ -198,6 +227,73 @@ func interpolateBurndownMatrix(matrix [][]int, startTime, endTime time.Time, res
 		}
 	}
 
+	progEstimator.FinishOperation()
+	return interpolated, dateRange
+}
+
+// interpolateBurndownMatrixWithProgress interpolates and resamples the matrix with progress tracking
+func interpolateBurndownMatrixWithProgress(matrix [][]int, startTime, endTime time.Time, resample string, progEstimator *progress.ProgressEstimator) ([][]float64, []time.Time) {
+	if len(matrix) == 0 || len(matrix[0]) == 0 {
+		return [][]float64{}, []time.Time{}
+	}
+
+	numBands := len(matrix)
+	originalTicks := len(matrix[0])
+
+	// Generate the target date range based on resampling
+	dateRange := resampleDateRange(startTime, endTime, resample)
+	targetTicks := len(dateRange)
+
+	// Create interpolated matrix
+	interpolated := make([][]float64, numBands)
+	for i := range interpolated {
+		interpolated[i] = make([]float64, targetTicks)
+	}
+
+	// Start detailed progress tracking for interpolation
+	progEstimator.StartOperation("Interpolating matrix bands", numBands)
+
+	// Interpolate each band (developer/file/etc)
+	for band := 0; band < numBands; band++ {
+		progEstimator.UpdateProgress(1)
+
+		// If target resolution matches original, direct copy
+		if targetTicks == originalTicks {
+			for tick := 0; tick < originalTicks; tick++ {
+				interpolated[band][tick] = float64(matrix[band][tick])
+			}
+			continue
+		}
+
+		// Interpolate between original data points
+		for targetTick := 0; targetTick < targetTicks; targetTick++ {
+			// Map target tick to original tick space
+			originalPos := float64(targetTick) * float64(originalTicks-1) / float64(targetTicks-1)
+
+			// Find surrounding original ticks
+			leftTick := int(originalPos)
+			rightTick := leftTick + 1
+
+			// Handle boundary cases
+			if leftTick >= originalTicks-1 {
+				interpolated[band][targetTick] = float64(matrix[band][originalTicks-1])
+				continue
+			}
+			if rightTick >= originalTicks {
+				interpolated[band][targetTick] = float64(matrix[band][leftTick])
+				continue
+			}
+
+			// Linear interpolation
+			fraction := originalPos - float64(leftTick)
+			leftValue := float64(matrix[band][leftTick])
+			rightValue := float64(matrix[band][rightTick])
+
+			interpolated[band][targetTick] = leftValue + fraction*(rightValue-leftValue)
+		}
+	}
+
+	progEstimator.FinishOperation()
 	return interpolated, dateRange
 }
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/viper"
 	"labours-go/internal/modes"
+	"labours-go/internal/progress"
 	"labours-go/internal/readers"
 )
 
@@ -30,14 +31,45 @@ var modeHandlers = map[string]func(reader readers.Reader, output string, startTi
 }
 
 func executeModes(modes []string, reader readers.Reader, output string, startTime, endTime *time.Time) {
-	for _, mode := range modes {
-		fmt.Printf("Running mode: %s\n", mode)
-		if modeFunc, ok := modeHandlers[mode]; ok {
-			if err := modeFunc(reader, output, startTime, endTime); err != nil {
-				fmt.Printf("Error in mode %s: %v\n", mode, err)
+	// Initialize progress tracking for multiple modes
+	quiet := viper.GetBool("quiet")
+	progEstimator := progress.NewProgressEstimator(!quiet)
+	
+	if len(modes) > 1 {
+		// Start multi-mode progress tracking
+		progEstimator.StartMultiOperation(len(modes), "Analysis Modes")
+		
+		for _, mode := range modes {
+			progEstimator.NextOperation(fmt.Sprintf("Running %s", mode))
+			
+			if !quiet {
+				fmt.Printf("Running mode: %s\n", mode)
 			}
-		} else {
-			fmt.Printf("Unknown mode: %s\n", mode)
+			
+			if modeFunc, ok := modeHandlers[mode]; ok {
+				if err := modeFunc(reader, output, startTime, endTime); err != nil {
+					fmt.Printf("Error in mode %s: %v\n", mode, err)
+				}
+			} else {
+				fmt.Printf("Unknown mode: %s\n", mode)
+			}
+		}
+		
+		progEstimator.FinishMultiOperation()
+	} else {
+		// Single mode - let the individual mode handle its own progress
+		for _, mode := range modes {
+			if !quiet {
+				fmt.Printf("Running mode: %s\n", mode)
+			}
+			
+			if modeFunc, ok := modeHandlers[mode]; ok {
+				if err := modeFunc(reader, output, startTime, endTime); err != nil {
+					fmt.Printf("Error in mode %s: %v\n", mode, err)
+				}
+			} else {
+				fmt.Printf("Unknown mode: %s\n", mode)
+			}
 		}
 	}
 }
@@ -87,9 +119,7 @@ func couplesShotness(reader readers.Reader, output string, startTime, endTime *t
 }
 
 func shotness(reader readers.Reader, output string, startTime, endTime *time.Time) error {
-	fmt.Println("Executing shotness...")
-	// Add logic for shotness
-	return nil
+	return modes.Shotness(reader, output)
 }
 
 func devs(reader readers.Reader, output string, startTime, endTime *time.Time) error {
@@ -105,25 +135,24 @@ func devsEfforts(reader readers.Reader, output string, startTime, endTime *time.
 }
 
 func oldVsNew(reader readers.Reader, output string, startTime, endTime *time.Time) error {
-	fmt.Println("Executing old-vs-new...")
-	// Add logic for old vs new
-	return nil
+	resample := viper.GetString("resample")
+	return modes.OldVsNew(reader, output, startTime, endTime, resample)
 }
 
 func languages(reader readers.Reader, output string, startTime, endTime *time.Time) error {
-	fmt.Println("Executing languages...")
-	// Add logic for languages
-	return nil
+	return modes.Languages(reader, output)
 }
 
 func devsParallel(reader readers.Reader, output string, startTime, endTime *time.Time) error {
-	fmt.Println("Executing devs-parallel...")
-	// Add logic for devs parallel
-	return nil
+	return modes.DevsParallel(reader, output)
 }
 
 func runTimes(reader readers.Reader, output string, startTime, endTime *time.Time) error {
 	fmt.Println("Executing run-times...")
 	// Add logic for run times
 	return nil
+}
+
+func sentiment(reader readers.Reader, output string, startTime, endTime *time.Time) error {
+	return modes.Sentiment(reader, output)
 }

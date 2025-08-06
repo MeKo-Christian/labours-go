@@ -5,38 +5,61 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/spf13/viper"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
 	"labours-go/internal/graphics"
+	"labours-go/internal/progress"
 	"labours-go/internal/readers"
 )
 
 // Devs generates plots for individual developers' contributions over time.
 func Devs(reader readers.Reader, output string, maxPeople int) error {
-	// Step 1: Extract developer statistics
+	// Initialize progress tracking
+	quiet := viper.GetBool("quiet")
+	progEstimator := progress.NewProgressEstimator(!quiet)
+	
+	// Start multi-phase operation for developer analysis
+	totalPhases := 5 // data extraction, selection, time series generation, clustering, plotting
+	progEstimator.StartMultiOperation(totalPhases, "Developer Analysis")
+
+	// Phase 1: Extract developer statistics
+	progEstimator.NextOperation("Extracting developer statistics")
 	developerStats, err := reader.GetDeveloperStats()
 	if err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("failed to get developer stats: %v", err)
 	}
 
+	// Phase 2: Select top developers
+	progEstimator.NextOperation("Selecting top developers")
 	if len(developerStats) > maxPeople {
-		fmt.Printf("Picking top %d developers by commit count.\n", maxPeople)
+		if !quiet {
+			fmt.Printf("Picking top %d developers by commit count.\n", maxPeople)
+		}
 		developerStats = selectTopDevelopers(developerStats, maxPeople)
 	}
 
-	// Step 2: Generate time series data for each developer
-	devSeries := generateTimeSeries(developerStats)
+	// Phase 3: Generate time series data for each developer
+	progEstimator.NextOperation("Generating time series data")
+	devSeries := generateTimeSeriesWithProgress(developerStats, progEstimator)
 
-	// Step 3: Cluster developers by contribution patterns (placeholder logic)
+	// Phase 4: Cluster developers by contribution patterns
+	progEstimator.NextOperation("Clustering developers")
 	clusters := clusterDevelopers(devSeries)
 
-	// Step 4: Plot the developer contributions
+	// Phase 5: Plot the developer contributions
+	progEstimator.NextOperation("Generating visualization")
 	if err := plotDevs(developerStats, devSeries, clusters, output); err != nil {
+		progEstimator.FinishMultiOperation()
 		return fmt.Errorf("failed to generate developer plots: %v", err)
 	}
 
-	fmt.Println("Developer plots generated successfully.")
+	progEstimator.FinishMultiOperation()
+	if !quiet {
+		fmt.Println("Developer plots generated successfully.")
+	}
 	return nil
 }
 
@@ -65,6 +88,30 @@ func generateTimeSeries(stats []readers.DeveloperStat) map[string][]float64 {
 		}
 		devSeries[stat.Name] = series
 	}
+	return devSeries
+}
+
+// generateTimeSeriesWithProgress generates synthetic time series data with progress tracking
+func generateTimeSeriesWithProgress(stats []readers.DeveloperStat, progEstimator *progress.ProgressEstimator) map[string][]float64 {
+	// Start detailed progress for time series generation
+	progEstimator.StartOperation("Generating time series", len(stats))
+	
+	devSeries := make(map[string][]float64)
+	for _, stat := range stats {
+		progEstimator.UpdateProgress(1)
+		
+		// Generate a synthetic time series based on commit activity
+		// In a real implementation, this would come from daily or weekly data
+		series := make([]float64, 52) // 52 weeks in a year
+		commitsPerWeek := float64(stat.Commits) / 52.0
+		for i := 0; i < len(series); i++ {
+			// Add random variation to simulate real activity
+			series[i] = commitsPerWeek + float64(i%5)*0.1*commitsPerWeek
+		}
+		devSeries[stat.Name] = series
+	}
+	
+	progEstimator.FinishOperation()
 	return devSeries
 }
 

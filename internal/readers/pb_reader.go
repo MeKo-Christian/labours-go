@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/spf13/viper"
 	"google.golang.org/protobuf/proto"
 	"labours-go/internal/pb"
+	"labours-go/internal/progress"
 )
 
 type ProtobufReader struct {
@@ -14,17 +16,29 @@ type ProtobufReader struct {
 
 // Read loads the Protobuf data into the ProtobufReader structure
 func (r *ProtobufReader) Read(file io.Reader) error {
+	// Initialize progress tracking for file reading
+	quiet := viper.GetBool("quiet")
+	progEstimator := progress.NewProgressEstimator(!quiet)
+	
+	// Start reading operation
+	progEstimator.StartOperation("Reading protobuf data", 2) // read + parse phases
+	
+	progEstimator.UpdateProgress(1)
 	allBytes, err := io.ReadAll(file)
 	if err != nil {
+		progEstimator.FinishOperation()
 		return fmt.Errorf("error reading Protobuf file: %v", err)
 	}
 
+	progEstimator.UpdateProgress(1)
 	var results pb.AnalysisResults
 	if err := proto.Unmarshal(allBytes, &results); err != nil {
+		progEstimator.FinishOperation()
 		return fmt.Errorf("error unmarshalling Protobuf: %v", err)
 	}
 
 	r.data = &results
+	progEstimator.FinishOperation()
 	return nil
 }
 
@@ -158,10 +172,24 @@ func (r *ProtobufReader) GetShotnessCooccurrence() ([]string, [][]int, error) {
 	return []string{}, [][]int{}, fmt.Errorf("shotness data not implemented in current protobuf format")
 }
 
-// GetShotnessStats retrieves shotness statistics
-func (r *ProtobufReader) GetShotnessStats() ([][]int, error) {
-	// This would require additional protobuf structure for shotness data
-	return [][]int{}, fmt.Errorf("shotness stats not implemented in current protobuf format")
+// GetShotnessRecords retrieves shotness records
+func (r *ProtobufReader) GetShotnessRecords() ([]ShotnessRecord, error) {
+	if r.data.GetShotness() == nil || len(r.data.GetShotness().GetRecords()) == 0 {
+		return []ShotnessRecord{}, fmt.Errorf("no shotness data found - ensure the input data contains shotness analysis results")
+	}
+
+	pbRecords := r.data.GetShotness().GetRecords()
+	records := make([]ShotnessRecord, len(pbRecords))
+	for i, pbRecord := range pbRecords {
+		records[i] = ShotnessRecord{
+			Type:     pbRecord.GetType(),
+			Name:     pbRecord.GetName(),
+			File:     pbRecord.GetFile(),
+			Counters: pbRecord.GetCounters(),
+		}
+	}
+
+	return records, nil
 }
 
 // GetDeveloperStats retrieves developer statistics
