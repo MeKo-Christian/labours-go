@@ -32,7 +32,7 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 	if numSeries == 0 {
 		return fmt.Errorf("empty matrix")
 	}
-	
+
 	numPoints := len(matrix[0])
 	if numPoints != len(dateRange) {
 		// Adjust date range or matrix to match
@@ -71,7 +71,7 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 		for j := 0; j < numPoints; j++ {
 			x := timeValues[j]
 			topY := cumulative[i][j]
-			
+
 			var bottomY float64
 			if i > 0 {
 				bottomY = cumulative[i-1][j]
@@ -116,10 +116,10 @@ func addStackedLayer(p *plot.Plot, top, bottom plotter.XYs, fillColor color.Colo
 
 	// Create polygon points: top curve + reversed bottom curve
 	points := make(plotter.XYs, len(top)+len(bottom))
-	
+
 	// Add top curve points
 	copy(points[:len(top)], top)
-	
+
 	// Add bottom curve points in reverse order
 	for i := range bottom {
 		points[len(top)+i] = plotter.XY{X: bottom[len(bottom)-1-i].X, Y: bottom[len(bottom)-1-i].Y}
@@ -133,10 +133,10 @@ func addStackedLayer(p *plot.Plot, top, bottom plotter.XYs, fillColor color.Colo
 
 	// Set fill color with some transparency
 	polygon.Color = fillColor
-	
+
 	// Add to plot
 	p.Add(polygon)
-	
+
 	// Add legend entry (just the top line for clarity)
 	line, err := plotter.NewLine(top)
 	if err == nil {
@@ -156,16 +156,16 @@ func generateColorPalette(n int) []color.Color {
 
 	// Use predefined colors for better visibility
 	baseColors := []color.Color{
-		color.RGBA{R: 31, G: 119, B: 180, A: 150},   // Blue
-		color.RGBA{R: 255, G: 127, B: 14, A: 150},   // Orange
-		color.RGBA{R: 44, G: 160, B: 44, A: 150},    // Green
-		color.RGBA{R: 214, G: 39, B: 40, A: 150},    // Red
-		color.RGBA{R: 148, G: 103, B: 189, A: 150},  // Purple
-		color.RGBA{R: 140, G: 86, B: 75, A: 150},    // Brown
-		color.RGBA{R: 227, G: 119, B: 194, A: 150},  // Pink
-		color.RGBA{R: 127, G: 127, B: 127, A: 150},  // Gray
-		color.RGBA{R: 188, G: 189, B: 34, A: 150},   // Olive
-		color.RGBA{R: 23, G: 190, B: 207, A: 150},   // Cyan
+		color.RGBA{R: 31, G: 119, B: 180, A: 150},  // Blue
+		color.RGBA{R: 255, G: 127, B: 14, A: 150},  // Orange
+		color.RGBA{R: 44, G: 160, B: 44, A: 150},   // Green
+		color.RGBA{R: 214, G: 39, B: 40, A: 150},   // Red
+		color.RGBA{R: 148, G: 103, B: 189, A: 150}, // Purple
+		color.RGBA{R: 140, G: 86, B: 75, A: 150},   // Brown
+		color.RGBA{R: 227, G: 119, B: 194, A: 150}, // Pink
+		color.RGBA{R: 127, G: 127, B: 127, A: 150}, // Gray
+		color.RGBA{R: 188, G: 189, B: 34, A: 150},  // Olive
+		color.RGBA{R: 23, G: 190, B: 207, A: 150},  // Cyan
 	}
 
 	colors := make([]color.Color, n)
@@ -177,7 +177,7 @@ func generateColorPalette(n int) []color.Color {
 			colors[i] = generateHSVColor(i, n)
 		}
 	}
-	
+
 	return colors
 }
 
@@ -186,15 +186,15 @@ func generateHSVColor(index, total int) color.Color {
 	// Use golden angle for better color distribution
 	goldenAngle := 137.508 // degrees
 	hue := math.Mod(float64(index)*goldenAngle, 360)
-	
+
 	// Convert HSV to RGB
 	saturation := 0.7
 	value := 0.9
-	
+
 	c := value * saturation
 	x := c * (1 - math.Abs(math.Mod(hue/60, 2)-1))
 	m := value - c
-	
+
 	var r, g, b float64
 	switch {
 	case hue < 60:
@@ -210,7 +210,7 @@ func generateHSVColor(index, total int) color.Color {
 	default:
 		r, g, b = c, 0, x
 	}
-	
+
 	return color.RGBA{
 		R: uint8((r + m) * 255),
 		G: uint8((g + m) * 255),
@@ -268,7 +268,7 @@ func (ticker *TimeTicker) Ticks(min, max float64) []plot.Tick {
 func PlotHeatmap(matrix [][]float64, rowLabels, colLabels []string, output string, title string) error {
 	p := plot.New()
 	p.Title.Text = title
-	
+
 	// This would be implemented with a proper heatmap plotter
 	// For now, return a placeholder implementation
 	return fmt.Errorf("heatmap plotting not yet implemented")
@@ -295,7 +295,7 @@ func PlotBarChart(values []float64, labels []string, output string, title string
 	if err != nil {
 		return fmt.Errorf("error creating bar chart: %v", err)
 	}
-	
+
 	barChart.Color = plotutil.Color(0)
 	p.Add(barChart)
 

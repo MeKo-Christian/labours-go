@@ -1,0 +1,327 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.22'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.21', '1.22']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}-
+          
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Verify dependencies
+      run: go mod verify
+      
+    - name: Generate test data
+      run: go run test/create_sample_data.go
+      
+    - name: Run tests
+      run: |
+        make test-unit
+        make test-integration
+        
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Generate test data
+      run: go run test/create_sample_data.go
+      
+    - name: Run benchmarks
+      run: make test-bench
+      
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: test_output/benchmarks.txt
+
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Check formatting
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Code is not formatted properly:"
+          gofmt -s -l .
+          exit 1
+        fi
+        
+    - name: Run go vet
+      run: go vet ./...
+      
+    - name: Install golangci-lint
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+        
+    - name: Run golangci-lint
+      run: $(go env GOPATH)/bin/golangci-lint run
+      
+    - name: Run security scan
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out results.sarif ./...'
+        
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: results.sarif
+
+  visual-regression:
+    name: Visual Regression
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Generate test data
+      run: go run test/create_sample_data.go
+      
+    - name: Run visual regression tests
+      run: VISUAL_REGRESSION=true ./scripts/run_tests.sh
+      
+    - name: Upload visual diff artifacts
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: visual-regression-diffs
+        path: test/golden/*.diff.png
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test, quality]
+    
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Build binary
+      run: |
+        mkdir -p bin
+        GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-w -s" -o bin/labours-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: labours-go-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: bin/labours-go-${{ matrix.goos }}-${{ matrix.goarch }}*
+
+  integration:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Download build artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: labours-go-linux-amd64
+        path: bin/
+        
+    - name: Make binary executable
+      run: chmod +x bin/labours-go-linux-amd64
+      
+    - name: Generate test data
+      run: go run test/create_sample_data.go
+      
+    - name: Test binary with sample data
+      run: |
+        # Test basic functionality
+        ./bin/labours-go-linux-amd64 --help
+        
+        # Test with sample data (if we have it)
+        if [ -f "test/testdata/simple_burndown.pb" ]; then
+          ./bin/labours-go-linux-amd64 -m burndown-project -i test/testdata/simple_burndown.pb -o test_output.png
+          if [ -f "test_output.png" ]; then
+            echo "✓ Binary successfully generated output"
+            ls -la test_output.png
+          else
+            echo "✗ Binary failed to generate output"
+            exit 1
+          fi
+        fi
+
+  performance-regression:
+    name: Performance Regression
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout base branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.base_ref }}
+        path: base
+        
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        path: pr
+        
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Run baseline benchmarks
+      run: |
+        cd base
+        go mod download
+        go run test/create_sample_data.go
+        go test -bench=. -benchmem -count=5 -run=^$ ./test/benchmark_test.go ./test/testdata_generator.go > ../baseline.txt
+        
+    - name: Run PR benchmarks
+      run: |
+        cd pr
+        go mod download
+        go run test/create_sample_data.go
+        go test -bench=. -benchmem -count=5 -run=^$ ./test/benchmark_test.go ./test/testdata_generator.go > ../pr.txt
+        
+    - name: Install benchstat
+      run: go install golang.org/x/perf/cmd/benchstat@latest
+      
+    - name: Compare benchmarks
+      run: |
+        $(go env GOPATH)/bin/benchstat baseline.txt pr.txt > comparison.txt
+        echo "Performance comparison:" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat comparison.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        
+    - name: Upload benchmark comparison
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-comparison
+        path: comparison.txt
