@@ -9,7 +9,7 @@ import (
 func TestDataFileGeneration(t *testing.T) {
 	// Test that our test data generation tool works
 	testDataPath := filepath.Join("..", "testdata", "simple_burndown.pb")
-	
+
 	// Check if test data exists
 	if _, err := os.Stat(testDataPath); os.IsNotExist(err) {
 		t.Skipf("Test data file not found: %s - run 'go run test/create_sample_data.go' first", testDataPath)
@@ -30,7 +30,7 @@ func TestDataFileGeneration(t *testing.T) {
 
 func TestRealisticDataFileGeneration(t *testing.T) {
 	testDataPath := filepath.Join("..", "testdata", "realistic_burndown.pb")
-	
+
 	if _, err := os.Stat(testDataPath); os.IsNotExist(err) {
 		t.Skipf("Realistic test data file not found: %s", testDataPath)
 	}
@@ -54,7 +54,7 @@ func TestRealisticDataFileGeneration(t *testing.T) {
 
 func TestTestDataReadme(t *testing.T) {
 	readmePath := filepath.Join("..", "testdata", "README.md")
-	
+
 	if _, err := os.Stat(readmePath); os.IsNotExist(err) {
 		t.Skipf("README file not found: %s", readmePath)
 	}
@@ -118,7 +118,7 @@ func TestDataFilesSizeDifference(t *testing.T) {
 	}
 
 	if realisticInfo.Size() <= simpleInfo.Size() {
-		t.Errorf("Realistic data (%d bytes) should be larger than simple data (%d bytes)", 
+		t.Errorf("Realistic data (%d bytes) should be larger than simple data (%d bytes)",
 			realisticInfo.Size(), simpleInfo.Size())
 	}
 
@@ -128,9 +128,9 @@ func TestDataFilesSizeDifference(t *testing.T) {
 
 // Helper function
 func contains(text, substring string) bool {
-	return len(text) > 0 && len(substring) > 0 && 
-		   len(text) >= len(substring) && 
-		   findSubstring(text, substring)
+	return len(text) > 0 && len(substring) > 0 &&
+		len(text) >= len(substring) &&
+		findSubstring(text, substring)
 }
 
 func findSubstring(text, substring string) bool {

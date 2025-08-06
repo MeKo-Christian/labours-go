@@ -3,14 +3,14 @@ package modes
 import (
 	"encoding/json"
 	"fmt"
-	"labours-go/internal/graphics"
-	"labours-go/internal/readers"
 	"os"
 	"sort"
 	"strings"
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/vg"
+	"labours-go/internal/graphics"
+	"labours-go/internal/readers"
 )
 
 func OverwritesMatrix(reader readers.Reader, output string) error {

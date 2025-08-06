@@ -2,8 +2,9 @@ package modes
 
 import (
 	"fmt"
-	"labours-go/internal/readers"
 	"time"
+
+	"labours-go/internal/readers"
 )
 
 // BurndownFile generates burndown charts for individual files.

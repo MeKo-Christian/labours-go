@@ -2,10 +2,11 @@ package modes
 
 import (
 	"fmt"
-	"labours-go/internal/readers"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"labours-go/internal/readers"
 )
 
 func TestGenerateDevsPlot(t *testing.T) {
@@ -151,18 +152,18 @@ func TestCalculateLanguageDistribution(t *testing.T) {
 func TestCalculateTeamMetrics(t *testing.T) {
 	devStats := []readers.DeveloperStat{
 		{
-			Name:          "Alice",
-			Commits:       50,
-			LinesAdded:    1000,
-			LinesRemoved:  200,
-			FilesTouched:  25,
+			Name:         "Alice",
+			Commits:      50,
+			LinesAdded:   1000,
+			LinesRemoved: 200,
+			FilesTouched: 25,
 		},
 		{
-			Name:          "Bob",
-			Commits:       30,
-			LinesAdded:    600,
-			LinesRemoved:  150,
-			FilesTouched:  15,
+			Name:         "Bob",
+			Commits:      30,
+			LinesAdded:   600,
+			LinesRemoved: 150,
+			FilesTouched: 15,
 		},
 	}
 
@@ -197,9 +198,9 @@ func TestCalculateTeamMetrics(t *testing.T) {
 // Helper type for team metrics testing
 type TeamMetrics struct {
 	TotalCommits               int
-	TotalLinesAdded           int
-	TotalLinesRemoved         int
-	TotalFilesTouched         int
+	TotalLinesAdded            int
+	TotalLinesRemoved          int
+	TotalFilesTouched          int
 	AverageCommitsPerDeveloper float64
 	AverageLinesPerDeveloper   float64
 }
@@ -207,19 +208,19 @@ type TeamMetrics struct {
 // Mock function for calculating team metrics
 func calculateTeamMetrics(devStats []readers.DeveloperStat) TeamMetrics {
 	var metrics TeamMetrics
-	
+
 	for _, dev := range devStats {
 		metrics.TotalCommits += dev.Commits
 		metrics.TotalLinesAdded += dev.LinesAdded
 		metrics.TotalLinesRemoved += dev.LinesRemoved
 		metrics.TotalFilesTouched += dev.FilesTouched
 	}
-	
+
 	if len(devStats) > 0 {
 		metrics.AverageCommitsPerDeveloper = float64(metrics.TotalCommits) / float64(len(devStats))
 		metrics.AverageLinesPerDeveloper = float64(metrics.TotalLinesAdded) / float64(len(devStats))
 	}
-	
+
 	return metrics
 }
 
@@ -227,7 +228,7 @@ func calculateTeamMetrics(devStats []readers.DeveloperStat) TeamMetrics {
 func sortDevelopersByCommits(devStats []readers.DeveloperStat) []readers.DeveloperStat {
 	sorted := make([]readers.DeveloperStat, len(devStats))
 	copy(sorted, devStats)
-	
+
 	// Simple bubble sort for testing
 	for i := 0; i < len(sorted)-1; i++ {
 		for j := 0; j < len(sorted)-i-1; j++ {
@@ -236,20 +237,20 @@ func sortDevelopersByCommits(devStats []readers.DeveloperStat) []readers.Develop
 			}
 		}
 	}
-	
+
 	return sorted
 }
 
 // Mock function for calculating language distribution
 func calculateLanguageDistribution(devStats []readers.DeveloperStat) map[string]int {
 	langDist := make(map[string]int)
-	
+
 	for _, dev := range devStats {
 		for lang, lines := range dev.Languages {
 			langDist[lang] += lines
 		}
 	}
-	
+
 	return langDist
 }
 
@@ -259,8 +260,8 @@ func mockGenerateDevsPlot(name string, devStats []readers.DeveloperStat, outputP
 	if len(devStats) == 0 {
 		return fmt.Errorf("empty developer stats")
 	}
-	
+
 	// Create a simple test file to simulate chart generation
 	content := fmt.Sprintf("Mock developer chart for %s with %d developers", name, len(devStats))
-	return os.WriteFile(outputPath, []byte(content), 0644)
+	return os.WriteFile(outputPath, []byte(content), 0o644)
 }

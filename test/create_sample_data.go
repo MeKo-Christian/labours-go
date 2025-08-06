@@ -2,19 +2,19 @@ package main
 
 import (
 	"fmt"
-	"labours-go/internal/pb"
 	"os"
 	"path/filepath"
 
 	"google.golang.org/protobuf/proto"
+	"labours-go/internal/pb"
 )
 
 // This utility creates sample test data files for testing
 func main() {
 	testDir := "test/testdata"
-	
+
 	// Ensure testdata directory exists
-	err := os.MkdirAll(testDir, 0755)
+	err := os.MkdirAll(testDir, 0o755)
 	if err != nil {
 		fmt.Printf("Failed to create testdata directory: %v\n", err)
 		os.Exit(1)
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	simplePath := filepath.Join(testDir, "simple_burndown.pb")
-	err = os.WriteFile(simplePath, simpleData, 0644)
+	err = os.WriteFile(simplePath, simpleData, 0o644)
 	if err != nil {
 		fmt.Printf("Failed to write simple data: %v\n", err)
 		os.Exit(1)
@@ -47,7 +47,7 @@ func main() {
 	}
 
 	realisticPath := filepath.Join(testDir, "realistic_burndown.pb")
-	err = os.WriteFile(realisticPath, realisticData, 0644)
+	err = os.WriteFile(realisticPath, realisticData, 0o644)
 	if err != nil {
 		fmt.Printf("Failed to write realistic data: %v\n", err)
 		os.Exit(1)
@@ -93,7 +93,7 @@ go run test/create_sample_data.go
 ` + "```" + `
 `
 
-	err = os.WriteFile(readmePath, []byte(readme), 0644)
+	err = os.WriteFile(readmePath, []byte(readme), 0o644)
 	if err != nil {
 		fmt.Printf("Failed to write README: %v\n", err)
 	} else {

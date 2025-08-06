@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"labours-go/internal/readers"
 	"os"
 	"time"
 
 	"github.com/araddon/dateparse"
 	"github.com/spf13/viper"
+	"labours-go/internal/readers"
 )
 
 // parseFlexibleDate parses a date string into a time.Time object.

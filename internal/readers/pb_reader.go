@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"labours-go/internal/pb"
-
 	"google.golang.org/protobuf/proto"
+	"labours-go/internal/pb"
 )
 
 type ProtobufReader struct {
@@ -62,7 +61,7 @@ func (r *ProtobufReader) GetFilesBurndown() ([]FileBurndown, error) {
 	}
 
 	matrix := parseCompressedSparseRowMatrix(r.data.Burndown.Files)
-	
+
 	// Create individual file burndown entries
 	var fileBurndowns []FileBurndown
 	for i, filename := range r.data.FileNames {
@@ -83,7 +82,7 @@ func (r *ProtobufReader) GetPeopleBurndown() ([]PeopleBurndown, error) {
 	}
 
 	matrix := parseCompressedSparseRowMatrix(r.data.Burndown.People)
-	
+
 	// Create individual people burndown entries
 	var peopleBurndowns []PeopleBurndown
 	for i, personName := range r.data.PeopleNames {
@@ -234,7 +233,7 @@ func parseCompressedSparseRowMatrix(matrix *pb.CompressedSparseRowMatrix) [][]in
 	for i := int32(0); i < matrix.NumberOfRows; i++ {
 		start := matrix.Indptr[i]
 		end := matrix.Indptr[i+1]
-		
+
 		for j := start; j < end; j++ {
 			col := matrix.Indices[j]
 			value := matrix.Data[j]

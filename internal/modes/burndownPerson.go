@@ -2,8 +2,9 @@ package modes
 
 import (
 	"fmt"
-	"labours-go/internal/readers"
 	"time"
+
+	"labours-go/internal/readers"
 )
 
 // BurndownPerson generates burndown charts for individual people/developers.

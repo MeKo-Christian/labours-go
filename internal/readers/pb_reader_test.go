@@ -2,11 +2,11 @@ package readers
 
 import (
 	"bytes"
-	"labours-go/internal/pb"
 	"strings"
 	"testing"
 
 	"google.golang.org/protobuf/proto"
+	"labours-go/internal/pb"
 )
 
 func TestProtobufReader_Read(t *testing.T) {
@@ -43,9 +43,9 @@ func TestProtobufReader_Read(t *testing.T) {
 			TickSize: 86400, // 1 day in seconds
 		},
 		Metadata: &pb.Metadata{
-			Repository: "test-repo",
+			Repository:    "test-repo",
 			BeginUnixTime: 1640995200, // 2022-01-01
-			EndUnixTime: 1672531200,   // 2023-01-01
+			EndUnixTime:   1672531200, // 2023-01-01
 		},
 	}
 
@@ -150,10 +150,10 @@ func TestProtobufReader_GetHeader(t *testing.T) {
 
 func TestProtobufReader_InvalidData(t *testing.T) {
 	reader := &ProtobufReader{}
-	
+
 	// Test with invalid protobuf data
 	invalidData := strings.NewReader("invalid protobuf data")
-	
+
 	err := reader.Read(invalidData)
 	if err == nil {
 		t.Error("Expected error when reading invalid protobuf data")
@@ -208,7 +208,7 @@ func createTestProtobufReader(t *testing.T) *ProtobufReader {
 
 	reader := &ProtobufReader{}
 	buffer := bytes.NewReader(data)
-	
+
 	err = reader.Read(buffer)
 	if err != nil {
 		t.Fatalf("Failed to read test data: %v", err)

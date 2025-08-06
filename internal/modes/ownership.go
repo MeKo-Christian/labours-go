@@ -3,8 +3,6 @@ package modes
 import (
 	"encoding/json"
 	"fmt"
-	"labours-go/internal/graphics"
-	"labours-go/internal/readers"
 	"math"
 	"os"
 	"path/filepath"
@@ -14,6 +12,8 @@ import (
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
+	"labours-go/internal/graphics"
+	"labours-go/internal/readers"
 )
 
 func OwnershipBurndown(reader readers.Reader, output string) error {

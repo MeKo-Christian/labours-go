@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"labours-go/internal/modes"
-	"labours-go/internal/readers"
 	"time"
 
 	"github.com/spf13/viper"
+	"labours-go/internal/modes"
+	"labours-go/internal/readers"
 )
 
 // Map of mode names to their handlers

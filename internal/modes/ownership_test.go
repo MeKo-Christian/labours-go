@@ -140,8 +140,8 @@ func TestFindTopFilesByOwnershipChanges(t *testing.T) {
 func TestCalculateOwnershipChurn(t *testing.T) {
 	// Test ownership churn calculation
 	ownershipMatrix := [][]int{
-		{100, 50, 0},  // Alice: high churn (changes from 100 to 0)
-		{0, 50, 100},  // Bob: high churn (changes from 0 to 100)
+		{100, 50, 0}, // Alice: high churn (changes from 100 to 0)
+		{0, 50, 100}, // Bob: high churn (changes from 0 to 100)
 	}
 
 	churn := calculateOwnershipChurn(ownershipMatrix)
@@ -166,7 +166,7 @@ func TestCalculateOwnershipChurn(t *testing.T) {
 
 func TestCalculateOwnershipConcentration(t *testing.T) {
 	// Test ownership concentration (Gini coefficient-like measure)
-	
+
 	// High concentration (one person owns everything)
 	concentratedMatrix := [][]int{
 		{100, 100, 100},
@@ -305,8 +305,8 @@ func mockGenerateOwnershipPlot(name string, people []string, ownership map[strin
 	if len(people) == 0 || len(ownership) == 0 {
 		return fmt.Errorf("empty people or ownership data")
 	}
-	
+
 	// Create a simple test file to simulate chart generation
 	content := fmt.Sprintf("Mock ownership chart for %s with %d people and %d files", name, len(people), len(ownership))
-	return os.WriteFile(outputPath, []byte(content), 0644)
+	return os.WriteFile(outputPath, []byte(content), 0o644)
 }

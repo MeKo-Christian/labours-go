@@ -25,7 +25,7 @@ func TestCreateStackedPlot(t *testing.T) {
 	}
 
 	labels := []string{"Series 1", "Series 2", "Series 3"}
-	
+
 	// Create time points
 	startTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	timePoints := make([]time.Time, 5)
@@ -84,7 +84,7 @@ func TestCreateStackedPlotSingleSeries(t *testing.T) {
 		{100, 80, 60, 40, 20},
 	}
 	labels := []string{"Single Series"}
-	
+
 	startTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	timePoints := make([]time.Time, 5)
 	for i := range timePoints {
@@ -111,7 +111,7 @@ func TestCreateStackedPlotMismatchedData(t *testing.T) {
 		{50, 40},      // 2 points (mismatch)
 	}
 	labels := []string{"Series 1", "Series 2"}
-	
+
 	startTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	timePoints := make([]time.Time, 3) // 3 points
 	for i := range timePoints {
@@ -155,7 +155,7 @@ func TestCreateBarChartEmptyData(t *testing.T) {
 func TestInterpolateData(t *testing.T) {
 	// Test linear interpolation
 	originalData := [][]float64{
-		{100, 50, 0},    // 3 points
+		{100, 50, 0}, // 3 points
 		{0, 25, 50},
 	}
 
@@ -310,7 +310,7 @@ func interpolateData(data [][]float64, targetPoints int) [][]float64 {
 	interpolated := make([][]float64, len(data))
 	for i := range interpolated {
 		interpolated[i] = make([]float64, targetPoints)
-		
+
 		if len(data[i]) == 0 {
 			continue
 		}
@@ -319,7 +319,7 @@ func interpolateData(data [][]float64, targetPoints int) [][]float64 {
 		for j := 0; j < targetPoints; j++ {
 			pos := float64(j) / float64(targetPoints-1) * float64(len(data[i])-1)
 			idx := int(pos)
-			
+
 			if idx >= len(data[i])-1 {
 				interpolated[i][j] = data[i][len(data[i])-1]
 			} else {
@@ -341,7 +341,7 @@ func calculateStackedValues(data [][]float64) [][]float64 {
 	for i := range stacked {
 		stacked[i] = make([]float64, len(data[i]))
 		copy(stacked[i], data[i])
-		
+
 		// Add values from previous series
 		for j := 0; j < i; j++ {
 			for k := range stacked[i] {
@@ -355,12 +355,12 @@ func calculateStackedValues(data [][]float64) [][]float64 {
 
 func generateTestColorPalette(count int) []color.Color {
 	colors := make([]color.Color, count)
-	
+
 	for i := 0; i < count; i++ {
 		hue := float64(i) / float64(count) * 360
 		colors[i] = hsvToRGB(hue, 0.7, 0.9)
 	}
-	
+
 	return colors
 }
 
@@ -380,7 +380,7 @@ func normalizeData(data [][]float64) [][]float64 {
 		for series := 0; series < len(data); series++ {
 			total += data[series][timePoint]
 		}
-		
+
 		if total > 0 {
 			for series := 0; series < len(data); series++ {
 				normalized[series][timePoint] = (data[series][timePoint] / total) * 100.0
@@ -440,33 +440,33 @@ func mockCreateStackedPlot(data [][]float64, labels []string, timePoints []time.
 	if len(data) == 0 || len(labels) == 0 || len(timePoints) == 0 {
 		return fmt.Errorf("empty data provided")
 	}
-	
+
 	// Check for mismatched data
 	if len(data) != len(labels) {
 		return fmt.Errorf("data and labels length mismatch")
 	}
-	
+
 	for i, series := range data {
 		if len(series) != len(timePoints) {
 			return fmt.Errorf("series %d length doesn't match time points", i)
 		}
 	}
-	
+
 	// Create mock output file
 	content := fmt.Sprintf("Mock stacked plot: %s with %d series and %d time points", title, len(data), len(timePoints))
-	return os.WriteFile(outputPath, []byte(content), 0644)
+	return os.WriteFile(outputPath, []byte(content), 0o644)
 }
 
 func mockCreateBarChart(values []float64, labels []string, title, yLabel, outputPath string) error {
 	if len(values) == 0 || len(labels) == 0 {
 		return fmt.Errorf("empty data provided")
 	}
-	
+
 	if len(values) != len(labels) {
 		return fmt.Errorf("values and labels length mismatch")
 	}
-	
+
 	// Create mock output file
 	content := fmt.Sprintf("Mock bar chart: %s with %d bars", title, len(values))
-	return os.WriteFile(outputPath, []byte(content), 0644)
+	return os.WriteFile(outputPath, []byte(content), 0o644)
 }

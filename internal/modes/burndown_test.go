@@ -60,7 +60,7 @@ func TestGenerateBurndownPlotRelative(t *testing.T) {
 
 func TestGenerateBurndownPlotResamplingModes(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	testMatrix := [][]int{
 		{100, 90, 80},
 		{120, 100, 85},
@@ -75,7 +75,7 @@ func TestGenerateBurndownPlotResamplingModes(t *testing.T) {
 	for _, mode := range resamplingModes {
 		t.Run("resampling_"+mode, func(t *testing.T) {
 			outputPath := filepath.Join(tmpDir, "test_burndown_"+mode+".png")
-			
+
 			err := generateBurndownPlot("test_"+mode, testMatrix, outputPath, false, &startTime, &endTime, mode)
 			if err != nil {
 				t.Errorf("generateBurndownPlot() with resample=%s error = %v", mode, err)
@@ -127,7 +127,7 @@ func TestFindEarliestTime(t *testing.T) {
 	// Should calculate back from endTime based on matrix size
 	// The actual function returns endTime - (numPoints * tickSize), which is 2024-01-03 - 3*24h = 2023-12-31
 	expectedTime := time.Date(2023, 12, 31, 0, 0, 0, 0, time.UTC)
-	
+
 	if !earliestTime.Equal(expectedTime) {
 		t.Errorf("findEarliestTime() = %v, want %v", earliestTime, expectedTime)
 	}
@@ -136,12 +136,12 @@ func TestFindEarliestTime(t *testing.T) {
 func TestCalculateSurvivalRatio(t *testing.T) {
 	// Test survival ratio calculation
 	testMatrix := [][]int{
-		{100, 50, 0},  // 100% -> 50% -> 0%
+		{100, 50, 0},   // 100% -> 50% -> 0%
 		{200, 100, 50}, // 100% -> 50% -> 25%
 	}
 
 	ratios := mockCalculateSurvivalRatio(testMatrix)
-	
+
 	if len(ratios) != len(testMatrix) {
 		t.Errorf("Expected %d ratios, got %d", len(testMatrix), len(ratios))
 	}
@@ -195,19 +195,19 @@ func mockCalculateSurvivalRatio(matrix [][]int) [][]float64 {
 	ratios := make([][]float64, len(matrix))
 	for i := range matrix {
 		ratios[i] = make([]float64, len(matrix[i]))
-		
+
 		if len(matrix[i]) > 0 {
 			firstValue := float64(matrix[i][0])
 			if firstValue == 0 {
 				firstValue = 1.0 // Avoid division by zero
 			}
-			
+
 			for j, val := range matrix[i] {
 				ratios[i][j] = float64(val) / firstValue
 			}
 		}
 	}
-	
+
 	return ratios
 }
 
@@ -224,11 +224,11 @@ func mockResampleMatrix(matrix [][]int, startTime, endTime time.Time, resample s
 			newLen = 1
 		}
 		resampled[i] = make([]int, newLen)
-		
+
 		for j := 0; j < newLen && j*2 < len(matrix[i]); j++ {
 			resampled[i][j] = matrix[i][j*2]
 		}
 	}
-	
+
 	return resampled
 }

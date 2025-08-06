@@ -2,12 +2,12 @@ package modes
 
 import (
 	"fmt"
-	"labours-go/internal/graphics"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/schollz/progressbar/v3"
+	"labours-go/internal/graphics"
 )
 
 // generateBurndownPlot creates the burndown plot with stacking, resampling, and survival ratio output.
@@ -73,7 +73,7 @@ func generateBurndownPlot(name string, matrix [][]int, output string, relative b
 // resampleDateRange creates a date range based on the given resampling interval.
 func resampleDateRange(start, end time.Time, resample string) []time.Time {
 	var dates []time.Time
-	
+
 	switch resample {
 	case "year":
 		// Yearly samples - start of each year
@@ -86,19 +86,19 @@ func resampleDateRange(start, end time.Time, resample string) []time.Time {
 				dates = append(dates, yearStart)
 			}
 		}
-		
+
 	case "month", "M":
 		// Monthly samples - start of each month
 		current := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, start.Location())
 		if current.Before(start) {
 			current = current.AddDate(0, 1, 0)
 		}
-		
+
 		for current.Before(end) || current.Equal(end) {
 			dates = append(dates, current)
 			current = current.AddDate(0, 1, 0)
 		}
-		
+
 	case "week", "W":
 		// Weekly samples - start of each week (Monday)
 		// Find the first Monday on or after start
@@ -106,25 +106,25 @@ func resampleDateRange(start, end time.Time, resample string) []time.Time {
 		for current.Weekday() != time.Monday {
 			current = current.AddDate(0, 0, 1)
 		}
-		
+
 		for current.Before(end) || current.Equal(end) {
 			dates = append(dates, current)
 			current = current.AddDate(0, 0, 7)
 		}
-		
+
 	case "day", "D":
 		// Daily samples
 		for current := start; current.Before(end) || current.Equal(end); current = current.AddDate(0, 0, 1) {
 			dates = append(dates, current)
 		}
-		
+
 	default:
 		// Default to daily sampling
 		for current := start; current.Before(end) || current.Equal(end); current = current.AddDate(0, 0, 1) {
 			dates = append(dates, current)
 		}
 	}
-	
+
 	// Ensure we have at least two points for interpolation
 	if len(dates) == 0 {
 		dates = append(dates, start, end)
@@ -133,7 +133,7 @@ func resampleDateRange(start, end time.Time, resample string) []time.Time {
 			dates = append(dates, end)
 		}
 	}
-	
+
 	return dates
 }
 
@@ -157,11 +157,11 @@ func interpolateBurndownMatrix(matrix [][]int, startTime, endTime time.Time, res
 	}
 
 	bar := progressbar.Default(int64(numBands), "Interpolating burndown data")
-	
+
 	// Interpolate each band (developer/file/etc)
 	for band := 0; band < numBands; band++ {
 		bar.Add(1)
-		
+
 		// If target resolution matches original, direct copy
 		if targetTicks == originalTicks {
 			for tick := 0; tick < originalTicks; tick++ {
@@ -174,11 +174,11 @@ func interpolateBurndownMatrix(matrix [][]int, startTime, endTime time.Time, res
 		for targetTick := 0; targetTick < targetTicks; targetTick++ {
 			// Map target tick to original tick space
 			originalPos := float64(targetTick) * float64(originalTicks-1) / float64(targetTicks-1)
-			
+
 			// Find surrounding original ticks
 			leftTick := int(originalPos)
 			rightTick := leftTick + 1
-			
+
 			// Handle boundary cases
 			if leftTick >= originalTicks-1 {
 				interpolated[band][targetTick] = float64(matrix[band][originalTicks-1])
@@ -188,12 +188,12 @@ func interpolateBurndownMatrix(matrix [][]int, startTime, endTime time.Time, res
 				interpolated[band][targetTick] = float64(matrix[band][leftTick])
 				continue
 			}
-			
+
 			// Linear interpolation
 			fraction := originalPos - float64(leftTick)
 			leftValue := float64(matrix[band][leftTick])
 			rightValue := float64(matrix[band][rightTick])
-			
+
 			interpolated[band][targetTick] = leftValue + fraction*(rightValue-leftValue)
 		}
 	}

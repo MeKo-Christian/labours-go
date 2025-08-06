@@ -5,6 +5,7 @@ This document provides comprehensive information about the testing infrastructur
 ## Overview
 
 The labours-go project includes a complete testing suite with:
+
 - Unit tests for all components
 - Integration tests with real data
 - Visual regression tests for chart consistency
@@ -91,27 +92,29 @@ Unit tests are located alongside source code files with `_test.go` suffix:
 - `internal/graphics/*_test.go` - Visualization tests
 
 **Key Features:**
+
 - Test individual functions and methods
 - Mock dependencies for isolation
 - Fast execution
 - High code coverage
 
 **Example:**
+
 ```go
 func TestGenerateBurndownPlot(t *testing.T) {
     tmpDir := t.TempDir()
     outputPath := filepath.Join(tmpDir, "test_burndown.png")
-    
+
     testMatrix := [][]int{
         {100, 90, 80},
         {120, 100, 85},
     }
-    
+
     err := generateBurndownPlot("test", testMatrix, outputPath, false, &startTime, &endTime, "day")
     if err != nil {
         t.Errorf("generateBurndownPlot() error = %v", err)
     }
-    
+
     // Verify output file exists
     if _, err := os.Stat(outputPath); os.IsNotExist(err) {
         t.Errorf("Output file was not created: %s", outputPath)
@@ -124,18 +127,20 @@ func TestGenerateBurndownPlot(t *testing.T) {
 Integration tests verify end-to-end functionality with real data:
 
 **Test Cases:**
+
 - Complete protobuf data processing
 - Multi-format data reading
 - CLI command execution
 - Output file generation
 
 **Example:**
+
 ```go
 func TestEndToEndBurndownProject(t *testing.T) {
     // Generate test data
     generator := NewTestDataGenerator(12345)
     testData := generator.GenerateSimpleBurndownData()
-    
+
     // Write and read data
     pbData, err := generator.SerializeToBytes(testData)
     // ... test reading and processing
@@ -147,18 +152,21 @@ func TestEndToEndBurndownProject(t *testing.T) {
 Visual regression tests ensure chart output consistency:
 
 **Features:**
+
 - Golden file comparison
 - Pixel-perfect matching
 - Difference highlighting
 - Automated golden file generation
 
 **Workflow:**
+
 1. Generate chart with test data
 2. Compare with golden file
 3. Fail if differences detected
 4. Save diff image for inspection
 
 **Example:**
+
 ```bash
 # Run visual tests
 make test-visual
@@ -172,16 +180,18 @@ make golden-regen
 Benchmark tests measure and track performance:
 
 **Metrics:**
+
 - Operations per second
 - Memory usage
 - Allocation patterns
 - Execution time
 
 **Example:**
+
 ```go
 func BenchmarkDataGeneration(b *testing.B) {
     generator := NewTestDataGenerator(time.Now().UnixNano())
-    
+
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
         data := generator.GenerateSimpleBurndownData()
@@ -209,11 +219,13 @@ go run test/create_sample_data.go
 ### Types
 
 1. **Simple Burndown Data**
+
    - 3 people, 2 files, 30 days
    - Small scale for fast tests
    - File: `simple_burndown.pb`
 
 2. **Realistic Burndown Data**
+
    - 10 people, 50 files, 365 days
    - Large scale for performance tests
    - File: `realistic_burndown.pb`
@@ -248,6 +260,7 @@ open test_output/coverage.html
 ### Exclusions
 
 Coverage excludes:
+
 - Generated protobuf files
 - Test utility functions
 - Main package entry points
@@ -257,6 +270,7 @@ Coverage excludes:
 ### GitHub Actions
 
 The CI pipeline includes:
+
 - Multi-Go version testing (1.21, 1.22)
 - Code quality checks
 - Security scanning
@@ -272,6 +286,7 @@ The CI pipeline includes:
 ### Quality Gates
 
 All checks must pass:
+
 - ✅ Unit tests
 - ✅ Integration tests
 - ✅ Code formatting
@@ -296,15 +311,15 @@ func TestFunctionName(t *testing.T) {
     // Arrange - set up test data
     input := setupTestData()
     expected := expectedResult()
-    
+
     // Act - execute the function
     result, err := functionUnderTest(input)
-    
+
     // Assert - verify results
     if err != nil {
         t.Errorf("Unexpected error: %v", err)
     }
-    
+
     if result != expected {
         t.Errorf("Expected %v, got %v", expected, result)
     }
@@ -324,7 +339,7 @@ func TestCalculation(t *testing.T) {
         {"negative", -3, -6},
         {"zero", 0, 0},
     }
-    
+
     for _, tc := range testCases {
         t.Run(tc.name, func(t *testing.T) {
             result := calculate(tc.input)
@@ -377,6 +392,7 @@ go test -race -run TestFunctionName ./internal/modes/
 ### Performance Regression
 
 The CI pipeline automatically compares performance:
+
 - Baseline from main branch
 - PR branch performance
 - Automated reporting of significant changes
@@ -394,6 +410,7 @@ The CI pipeline automatically compares performance:
 ### Adding Tests
 
 When adding new functionality:
+
 1. Write tests first (TDD approach)
 2. Ensure comprehensive coverage
 3. Include edge cases

@@ -2,8 +2,9 @@ package modes
 
 import (
 	"fmt"
-	"labours-go/internal/readers"
 	"time"
+
+	"labours-go/internal/readers"
 )
 
 // BurndownProject generates a burndown chart for the entire project.

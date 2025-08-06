@@ -1,8 +1,9 @@
 package main
 
 import (
-	"labours-go/cmd"
 	"log"
+
+	"labours-go/cmd"
 )
 
 func main() {

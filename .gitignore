@@ -1,3 +1,78 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Built binary
+labours-go
+labours-go.exe
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+coverage.out
+coverage.html
+*.cover
+
+# Go workspace file
+go.work
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go modules cache
+go.sum.backup
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Generated output files
 *.svg
 *.png
-labours-go
+*.pdf
+
+# Test and build output directories
+test_output/
+build/
+dist/
+bin/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Configuration files that might contain secrets
+config.local.yaml
+config.local.yml
+.env.local
+.env.*.local
+
+# Benchmark and profiling data
+*.prof
+*.mem
+*.cpu
+benchmarks.txt
+
+# Generated protobuf files (uncomment if you regenerate them)
+# *.pb.go

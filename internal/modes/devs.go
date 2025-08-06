@@ -2,14 +2,14 @@ package modes
 
 import (
 	"fmt"
-	"labours-go/internal/graphics"
-	"labours-go/internal/readers"
 	"path/filepath"
 	"sort"
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
+	"labours-go/internal/graphics"
+	"labours-go/internal/readers"
 )
 
 // Devs generates plots for individual developers' contributions over time.

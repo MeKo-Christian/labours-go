@@ -1,0 +1,63 @@
+# treefmt configuration for labours-go
+
+[global]
+excludes = [
+  # Hidden & repo files
+  ".*",
+  "**/.*",
+  "CODEOWNERS",
+  # Generated files
+  "**/*_gen.go",
+  "**/*.pb.go",
+  "**/generated.go",
+  # Documentation that shouldn't be formatted
+  "CHANGELOG.md",
+  "LICENSE",
+  # Test data and outputs
+  "test/testdata/**",
+  "testdata/**",
+  "*.svg",
+  "*.png",
+  "coverage.html",
+  "coverage.out",
+  # Build artifacts
+  "labours-go",
+  "dist/**",
+  # Go mod files
+  "go.sum",
+  "go.mod",
+  # Makefiles
+  "Makefile",
+  "**/Makefile",
+]
+
+### Go formatting
+
+[formatter.gofumpt]
+command = "gofumpt"
+options = ["-w"]
+includes = ["*.go"]
+excludes = ["**/*.pb.go"]
+
+[formatter.gci]
+command = "gci"
+options = ["-w"]
+includes = ["*.go"]
+excludes = ["**/*.pb.go"]
+priority = 1
+
+### General formatting
+
+[formatter.prettier]
+command = "prettier"
+options = ["-w"]
+includes = ["*.json", "*.md", "*.yaml", "*.yml"]
+excludes = ["test/golden/**"]
+
+### Shell formatting
+
+[formatter.shfmt]
+command = "shfmt"
+options = ["-s", "-w"]
+includes = ["*.sh"]
+priority = 1
