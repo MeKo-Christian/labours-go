@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
+	"labours-go/internal/burndown"
 	"labours-go/internal/progress"
 )
 
@@ -360,4 +361,38 @@ func parseBurndownMatrix(data string) [][]int {
 		matrix = append(matrix, row)
 	}
 	return matrix
+}
+
+// GetBurndownParameters retrieves burndown parameters for YAML reader (stub implementation)
+func (r *YamlReader) GetBurndownParameters() (burndown.BurndownParameters, error) {
+	// YAML format doesn't typically contain these parameters explicitly
+	// Return reasonable defaults for compatibility
+	return burndown.BurndownParameters{
+		Sampling:    1,     // Daily sampling
+		Granularity: 1,     // 1 day granularity  
+		TickSize:    86400, // 24 hours in seconds
+	}, nil
+}
+
+// GetProjectBurndownWithHeader retrieves project burndown with header for YAML reader
+func (r *YamlReader) GetProjectBurndownWithHeader() (burndown.BurndownHeader, string, [][]int, error) {
+	// Get the basic data
+	name, matrix := r.GetProjectBurndown()
+	if len(matrix) == 0 {
+		return burndown.BurndownHeader{}, "", nil, fmt.Errorf("no project burndown data")
+	}
+	
+	// Get header info
+	start, last := r.GetHeader()
+	params, _ := r.GetBurndownParameters()
+	
+	header := burndown.BurndownHeader{
+		Start:       start,
+		Last:        last,
+		Sampling:    params.Sampling,
+		Granularity: params.Granularity,
+		TickSize:    params.TickSize,
+	}
+	
+	return header, name, matrix, nil
 }

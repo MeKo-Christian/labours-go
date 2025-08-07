@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/viper"
 	"google.golang.org/protobuf/proto"
+	"labours-go/internal/burndown"
 	"labours-go/internal/pb"
 	"labours-go/internal/progress"
 )
@@ -257,17 +258,95 @@ func parseCompressedSparseRowMatrix(matrix *pb.CompressedSparseRowMatrix) [][]in
 		result[i] = make([]int, matrix.NumberOfColumns)
 	}
 
-	// Convert from CSR format to dense matrix
+	// Convert from CSR format to dense matrix with bounds checking
 	for i := int32(0); i < matrix.NumberOfRows; i++ {
+		if int(i+1) >= len(matrix.Indptr) {
+			break
+		}
 		start := matrix.Indptr[i]
 		end := matrix.Indptr[i+1]
 
 		for j := start; j < end; j++ {
+			if int(j) >= len(matrix.Indices) || int(j) >= len(matrix.Data) {
+				break
+			}
 			col := matrix.Indices[j]
+			if int(col) >= int(matrix.NumberOfColumns) {
+				continue
+			}
 			value := matrix.Data[j]
 			result[i][col] = int(value)
 		}
 	}
 
 	return result
+}
+
+// GetBurndownParameters retrieves burndown parameters in Python-compatible format
+func (r *ProtobufReader) GetBurndownParameters() (burndown.BurndownParameters, error) {
+	if r.data.Burndown == nil {
+		return burndown.BurndownParameters{}, fmt.Errorf("no burndown data found")
+	}
+
+	// Calculate appropriate tick size based on time span and matrix dimensions
+	tickSize := float64(r.data.Burndown.TickSize) / 1e9 // Convert nanoseconds to seconds
+	
+	if r.data.Metadata != nil {
+		// Calculate tick size from actual time span and expected data points
+		timeSpan := float64(r.data.Metadata.EndUnixTime - r.data.Metadata.BeginUnixTime)
+		
+		// Get matrix dimensions to calculate appropriate tick size
+		if r.data.Burndown.Project != nil {
+			matrixCols := r.data.Burndown.Project.NumberOfColumns
+			if matrixCols > 1 && timeSpan > 0 {
+				// Calculate tick size as time span divided by number of time points
+				calculatedTick := timeSpan / float64(matrixCols-1)
+				
+				// Use calculated tick size if it's reasonable, otherwise use original or fallback
+				if calculatedTick > 0 && calculatedTick < timeSpan {
+					tickSize = calculatedTick
+				}
+			}
+		}
+	}
+	
+	// Fallback if we still don't have a reasonable tick size
+	if tickSize <= 0 || tickSize > 365*24*3600 { // More than a year per tick seems wrong
+		tickSize = 86400 // Default to 1 day in seconds
+	}
+
+	// Debug output removed - tick size calculation working correctly
+	
+	return burndown.BurndownParameters{
+		Sampling:    1,        // Daily sampling (1 day)
+		Granularity: 1,        // 1 day granularity
+		TickSize:    tickSize, // Calculated or fallback tick size
+	}, nil
+}
+
+// GetProjectBurndownWithHeader retrieves project burndown with full header info
+func (r *ProtobufReader) GetProjectBurndownWithHeader() (burndown.BurndownHeader, string, [][]int, error) {
+	if r.data.Burndown == nil || r.data.Burndown.Project == nil {
+		return burndown.BurndownHeader{}, "", nil, fmt.Errorf("no project burndown data found")
+	}
+
+	// Get header information
+	start, last := r.GetHeader()
+	params, err := r.GetBurndownParameters()
+	if err != nil {
+		return burndown.BurndownHeader{}, "", nil, err
+	}
+
+	header := burndown.BurndownHeader{
+		Start:       start,
+		Last:        last,
+		Sampling:    params.Sampling,
+		Granularity: params.Granularity,
+		TickSize:    params.TickSize,
+	}
+
+	// Get matrix and name
+	name, matrix := r.GetProjectBurndown()
+
+	return header, name, matrix, nil
 }

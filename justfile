@@ -85,6 +85,36 @@ run-built *ARGS:
     @echo "+ Running built labours-go {{ARGS}}"
     ./labours-go {{ARGS}}
 
+# Generate hercules data for this repository
+generate-data OUTPUT_DIR="./data":
+    @echo "+ Generating hercules data for labours-go repository"
+    @mkdir -p {{OUTPUT_DIR}}
+    @echo "+ Running hercules analysis (burndown, devs, couples)..."
+    /home/christian/Code/hercules/hercules --burndown --burndown-files --burndown-people . > {{OUTPUT_DIR}}/labours-go_burndown.yaml
+    /home/christian/Code/hercules/hercules --devs . > {{OUTPUT_DIR}}/labours-go_devs.yaml
+    /home/christian/Code/hercules/hercules --couples . > {{OUTPUT_DIR}}/labours-go_couples.yaml
+    @echo "+ Data generated in {{OUTPUT_DIR}}/"
+    @ls -la {{OUTPUT_DIR}}/
+
+# Generate hercules data in Protocol Buffer format
+generate-data-pb OUTPUT_DIR="./data":
+    @echo "+ Generating hercules data for labours-go repository (Protocol Buffer format)"
+    @mkdir -p {{OUTPUT_DIR}}
+    @echo "+ Running hercules analysis (burndown, devs, couples)..."
+    /home/christian/Code/hercules/hercules --pb --burndown --burndown-files --burndown-people . > {{OUTPUT_DIR}}/labours-go_burndown.pb
+    /home/christian/Code/hercules/hercules --pb --devs . > {{OUTPUT_DIR}}/labours-go_devs.pb
+    /home/christian/Code/hercules/hercules --pb --couples . > {{OUTPUT_DIR}}/labours-go_couples.pb
+    @echo "+ Data generated in {{OUTPUT_DIR}}/"
+    @ls -la {{OUTPUT_DIR}}/
+
+# Full analysis pipeline - generate data and create charts
+analyze OUTPUT_DIR="./analysis" THEME="default":
+    @echo "+ Running full analysis pipeline for labours-go repository"
+    @mkdir -p {{OUTPUT_DIR}}
+    just build
+    ./scripts/analyze_with_hercules.sh . -o {{OUTPUT_DIR}} -t {{THEME}} -m burndown,devs,couples
+    @echo "+ Analysis complete! Results in {{OUTPUT_DIR}}/"
+
 # Documentation
 docs:
     @echo "+ Generating documentation"

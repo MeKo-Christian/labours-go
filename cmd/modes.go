@@ -77,13 +77,15 @@ func executeModes(modes []string, reader readers.Reader, output string, startTim
 func burndownProject(reader readers.Reader, output string, startTime, endTime *time.Time) error {
 	relative := viper.GetBool("relative")
 	resample := viper.GetString("resample")
-	return modes.BurndownProject(reader, output, relative, startTime, endTime, resample)
+	// Use Python-compatible implementation
+	return modes.GenerateBurndownProjectPython(reader, output, relative, resample)
 }
 
 func burndownFile(reader readers.Reader, output string, startTime, endTime *time.Time) error {
 	relative := viper.GetBool("relative")
 	resample := viper.GetString("resample")
-	return modes.BurndownFile(reader, output, relative, startTime, endTime, resample)
+	// Use Python-compatible implementation  
+	return modes.GenerateBurndownFilePython(reader, output, relative, resample)
 }
 
 func burndownPerson(reader readers.Reader, output string, startTime, endTime *time.Time) error {

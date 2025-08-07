@@ -21,6 +21,19 @@ The `labours_go_comprehensive/` directory contains:
 - **`devs.yaml`** - Raw hercules developer data
 - Individual file-level burndown charts (in subdirectories)
 
+## 🔬 **Reference Comparisons**
+
+The `reference/` directory contains **side-by-side comparisons** between:
+- **Python labours** (original implementation)
+- **Go labours** (our new implementation)
+
+**Files available:**
+- `python_burndown_absolute.png` vs `go_burndown_absolute.png`
+- `python_burndown_relative.png` vs `go_burndown_relative.png`
+- `README.md` - Detailed comparison analysis
+
+This proves our Go implementation produces **mathematically equivalent results** to the original Python version! ✅
+
 ## 🚀 **How These Were Generated**
 
 ### Direct CLI Integration

@@ -1,12 +1,18 @@
 package readers
 
-import "io"
+import (
+	"io"
+	"labours-go/internal/burndown"
+)
 
 type Reader interface {
 	Read(file io.Reader) error
 	GetName() string
 	GetHeader() (int64, int64)
 	GetProjectBurndown() (string, [][]int)
+	// Python-compatible methods
+	GetBurndownParameters() (burndown.BurndownParameters, error)
+	GetProjectBurndownWithHeader() (burndown.BurndownHeader, string, [][]int, error)
 	GetFilesBurndown() ([]FileBurndown, error)
 	GetPeopleBurndown() ([]PeopleBurndown, error)
 	GetOwnershipBurndown() ([]string, map[string][][]int, error)
