@@ -76,7 +76,8 @@ func resolveModes() []string {
 		// Default behavior: if no modes specified, show available modes like Python
 		fmt.Println("No modes specified. Available modes:")
 		fmt.Println("  burndown (alias for burndown-project), burndown-project, burndown-file, burndown-person")
-		fmt.Println("  ownership, overwrites-matrix")  
+		fmt.Println("  ownership, overwrites-matrix")
+		fmt.Println("  couples (runs couples-files, couples-people, couples-shotness)")
 		fmt.Println("  couples-files, couples-people, couples-shotness")
 		fmt.Println("  devs, devs-efforts, shotness")
 		fmt.Println("  old-vs-new, languages, devs-parallel")
@@ -93,6 +94,9 @@ func resolveModes() []string {
 		case "burndown":
 			// Python compatibility: burndown defaults to burndown-project
 			resolvedModes = append(resolvedModes, "burndown-project")
+		case "couples":
+			// Python compatibility: couples runs all coupling analyses
+			resolvedModes = append(resolvedModes, "couples-files", "couples-people", "couples-shotness")
 		default:
 			resolvedModes = append(resolvedModes, mode)
 		}

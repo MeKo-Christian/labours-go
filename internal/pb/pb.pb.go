@@ -21,22 +21,149 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Sparse matrix row for burndown data
+type BurndownSparseMatrixRow struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// the first `len(column)` elements are stored,
+	// the rest `number_of_columns - len(column)` values are zeros
+	Columns       []uint32 `protobuf:"varint,1,rep,packed,name=columns,proto3" json:"columns,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BurndownSparseMatrixRow) Reset() {
+	*x = BurndownSparseMatrixRow{}
+	mi := &file_pb_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BurndownSparseMatrixRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BurndownSparseMatrixRow) ProtoMessage() {}
+
+func (x *BurndownSparseMatrixRow) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BurndownSparseMatrixRow.ProtoReflect.Descriptor instead.
+func (*BurndownSparseMatrixRow) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *BurndownSparseMatrixRow) GetColumns() []uint32 {
+	if x != nil {
+		return x.Columns
+	}
+	return nil
+}
+
+// Burndown-specific sparse matrix representation
+type BurndownSparseMatrix struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	NumberOfRows    int32                  `protobuf:"varint,2,opt,name=number_of_rows,json=numberOfRows,proto3" json:"number_of_rows,omitempty"`
+	NumberOfColumns int32                  `protobuf:"varint,3,opt,name=number_of_columns,json=numberOfColumns,proto3" json:"number_of_columns,omitempty"`
+	// `len(row)` matches `number_of_rows`
+	Rows          []*BurndownSparseMatrixRow `protobuf:"bytes,4,rep,name=rows,proto3" json:"rows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BurndownSparseMatrix) Reset() {
+	*x = BurndownSparseMatrix{}
+	mi := &file_pb_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BurndownSparseMatrix) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BurndownSparseMatrix) ProtoMessage() {}
+
+func (x *BurndownSparseMatrix) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BurndownSparseMatrix.ProtoReflect.Descriptor instead.
+func (*BurndownSparseMatrix) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *BurndownSparseMatrix) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *BurndownSparseMatrix) GetNumberOfRows() int32 {
+	if x != nil {
+		return x.NumberOfRows
+	}
+	return 0
+}
+
+func (x *BurndownSparseMatrix) GetNumberOfColumns() int32 {
+	if x != nil {
+		return x.NumberOfColumns
+	}
+	return 0
+}
+
+func (x *BurndownSparseMatrix) GetRows() []*BurndownSparseMatrixRow {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
 // Main analysis result container
 type BurndownAnalysisResults struct {
-	state             protoimpl.MessageState     `protogen:"open.v1"`
-	Project           *CompressedSparseRowMatrix `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Files             *CompressedSparseRowMatrix `protobuf:"bytes,2,opt,name=files,proto3" json:"files,omitempty"`
-	People            *CompressedSparseRowMatrix `protobuf:"bytes,3,opt,name=people,proto3" json:"people,omitempty"`
-	PeopleInteraction *CompressedSparseRowMatrix `protobuf:"bytes,4,opt,name=people_interaction,json=peopleInteraction,proto3" json:"people_interaction,omitempty"`
-	FilesOwnership    *FilesOwnership            `protobuf:"bytes,5,opt,name=files_ownership,json=filesOwnership,proto3" json:"files_ownership,omitempty"`
-	TickSize          int32                      `protobuf:"varint,6,opt,name=tick_size,json=tickSize,proto3" json:"tick_size,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// how many ticks are in each band [burndown_project, burndown_file, burndown_developer]
+	Granularity int32 `protobuf:"varint,1,opt,name=granularity,proto3" json:"granularity,omitempty"`
+	// how frequently we measure the state of each band [burndown_project, burndown_file, burndown_developer]
+	Sampling int32 `protobuf:"varint,2,opt,name=sampling,proto3" json:"sampling,omitempty"`
+	// always exists
+	Project *BurndownSparseMatrix `protobuf:"bytes,3,opt,name=project,proto3" json:"project,omitempty"`
+	// this is included if `--burndown-files` was specified
+	Files []*BurndownSparseMatrix `protobuf:"bytes,4,rep,name=files,proto3" json:"files,omitempty"`
+	// these two are included if `--burndown-people` was specified
+	People []*BurndownSparseMatrix `protobuf:"bytes,5,rep,name=people,proto3" json:"people,omitempty"`
+	// rows and cols order correspond to `burndown_developer`
+	PeopleInteraction *CompressedSparseRowMatrix `protobuf:"bytes,6,opt,name=people_interaction,json=peopleInteraction,proto3" json:"people_interaction,omitempty"`
+	// How many lines belong to relevant developers for each file. The order is the same as in `files`.
+	FilesOwnership []*FilesOwnership `protobuf:"bytes,7,rep,name=files_ownership,json=filesOwnership,proto3" json:"files_ownership,omitempty"`
+	// how long each tick is, as an int64 nanosecond count (Go's time.Duration)
+	TickSize      int64 `protobuf:"varint,8,opt,name=tick_size,json=tickSize,proto3" json:"tick_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BurndownAnalysisResults) Reset() {
 	*x = BurndownAnalysisResults{}
-	mi := &file_pb_proto_msgTypes[0]
+	mi := &file_pb_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +175,7 @@ func (x *BurndownAnalysisResults) String() string {
 func (*BurndownAnalysisResults) ProtoMessage() {}
 
 func (x *BurndownAnalysisResults) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[0]
+	mi := &file_pb_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,24 +188,38 @@ func (x *BurndownAnalysisResults) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BurndownAnalysisResults.ProtoReflect.Descriptor instead.
 func (*BurndownAnalysisResults) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{0}
+	return file_pb_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *BurndownAnalysisResults) GetProject() *CompressedSparseRowMatrix {
+func (x *BurndownAnalysisResults) GetGranularity() int32 {
+	if x != nil {
+		return x.Granularity
+	}
+	return 0
+}
+
+func (x *BurndownAnalysisResults) GetSampling() int32 {
+	if x != nil {
+		return x.Sampling
+	}
+	return 0
+}
+
+func (x *BurndownAnalysisResults) GetProject() *BurndownSparseMatrix {
 	if x != nil {
 		return x.Project
 	}
 	return nil
 }
 
-func (x *BurndownAnalysisResults) GetFiles() *CompressedSparseRowMatrix {
+func (x *BurndownAnalysisResults) GetFiles() []*BurndownSparseMatrix {
 	if x != nil {
 		return x.Files
 	}
 	return nil
 }
 
-func (x *BurndownAnalysisResults) GetPeople() *CompressedSparseRowMatrix {
+func (x *BurndownAnalysisResults) GetPeople() []*BurndownSparseMatrix {
 	if x != nil {
 		return x.People
 	}
@@ -92,14 +233,14 @@ func (x *BurndownAnalysisResults) GetPeopleInteraction() *CompressedSparseRowMat
 	return nil
 }
 
-func (x *BurndownAnalysisResults) GetFilesOwnership() *FilesOwnership {
+func (x *BurndownAnalysisResults) GetFilesOwnership() []*FilesOwnership {
 	if x != nil {
 		return x.FilesOwnership
 	}
 	return nil
 }
 
-func (x *BurndownAnalysisResults) GetTickSize() int32 {
+func (x *BurndownAnalysisResults) GetTickSize() int64 {
 	if x != nil {
 		return x.TickSize
 	}
@@ -111,16 +252,17 @@ type CompressedSparseRowMatrix struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	NumberOfRows    int32                  `protobuf:"varint,1,opt,name=number_of_rows,json=numberOfRows,proto3" json:"number_of_rows,omitempty"`
 	NumberOfColumns int32                  `protobuf:"varint,2,opt,name=number_of_columns,json=numberOfColumns,proto3" json:"number_of_columns,omitempty"`
-	Data            []int64                `protobuf:"varint,3,rep,packed,name=data,proto3" json:"data,omitempty"`
-	Indices         []int32                `protobuf:"varint,4,rep,packed,name=indices,proto3" json:"indices,omitempty"`
-	Indptr          []int64                `protobuf:"varint,5,rep,packed,name=indptr,proto3" json:"indptr,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_.28CSR.2C_CRS_or_Yale_format.29
+	Data          []int64 `protobuf:"varint,3,rep,packed,name=data,proto3" json:"data,omitempty"`
+	Indices       []int32 `protobuf:"varint,4,rep,packed,name=indices,proto3" json:"indices,omitempty"`
+	Indptr        []int64 `protobuf:"varint,5,rep,packed,name=indptr,proto3" json:"indptr,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CompressedSparseRowMatrix) Reset() {
 	*x = CompressedSparseRowMatrix{}
-	mi := &file_pb_proto_msgTypes[1]
+	mi := &file_pb_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -132,7 +274,7 @@ func (x *CompressedSparseRowMatrix) String() string {
 func (*CompressedSparseRowMatrix) ProtoMessage() {}
 
 func (x *CompressedSparseRowMatrix) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[1]
+	mi := &file_pb_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -145,7 +287,7 @@ func (x *CompressedSparseRowMatrix) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompressedSparseRowMatrix.ProtoReflect.Descriptor instead.
 func (*CompressedSparseRowMatrix) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{1}
+	return file_pb_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CompressedSparseRowMatrix) GetNumberOfRows() int32 {
@@ -185,15 +327,16 @@ func (x *CompressedSparseRowMatrix) GetIndptr() []int64 {
 
 // File ownership data mapping file paths to developer indices
 type FilesOwnership struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Value         map[string]int32       `protobuf:"bytes,1,rep,name=value,proto3" json:"value,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The sum always equals to the total number of lines in the file.
+	Value         map[int32]int32 `protobuf:"bytes,1,rep,name=value,proto3" json:"value,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FilesOwnership) Reset() {
 	*x = FilesOwnership{}
-	mi := &file_pb_proto_msgTypes[2]
+	mi := &file_pb_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -205,7 +348,7 @@ func (x *FilesOwnership) String() string {
 func (*FilesOwnership) ProtoMessage() {}
 
 func (x *FilesOwnership) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[2]
+	mi := &file_pb_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -218,10 +361,10 @@ func (x *FilesOwnership) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesOwnership.ProtoReflect.Descriptor instead.
 func (*FilesOwnership) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{2}
+	return file_pb_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *FilesOwnership) GetValue() map[string]int32 {
+func (x *FilesOwnership) GetValue() map[int32]int32 {
 	if x != nil {
 		return x.Value
 	}
@@ -230,21 +373,30 @@ func (x *FilesOwnership) GetValue() map[string]int32 {
 
 // Repository metadata
 type Metadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       int32                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Hash          string                 `protobuf:"bytes,2,opt,name=hash,proto3" json:"hash,omitempty"`
-	Repository    string                 `protobuf:"bytes,3,opt,name=repository,proto3" json:"repository,omitempty"`
-	BeginUnixTime int64                  `protobuf:"varint,4,opt,name=begin_unix_time,json=beginUnixTime,proto3" json:"begin_unix_time,omitempty"`
-	EndUnixTime   int64                  `protobuf:"varint,5,opt,name=end_unix_time,json=endUnixTime,proto3" json:"end_unix_time,omitempty"`
-	Commits       int32                  `protobuf:"varint,6,opt,name=commits,proto3" json:"commits,omitempty"`
-	RunTime       int64                  `protobuf:"varint,7,opt,name=run_time,json=runTime,proto3" json:"run_time,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// this format is versioned
+	Version int32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// git hash of the revision from which Hercules is built
+	Hash string `protobuf:"bytes,2,opt,name=hash,proto3" json:"hash,omitempty"`
+	// repository's name
+	Repository string `protobuf:"bytes,3,opt,name=repository,proto3" json:"repository,omitempty"`
+	// UNIX timestamp of the first analysed commit
+	BeginUnixTime int64 `protobuf:"varint,4,opt,name=begin_unix_time,json=beginUnixTime,proto3" json:"begin_unix_time,omitempty"`
+	// UNIX timestamp of the last analysed commit
+	EndUnixTime int64 `protobuf:"varint,5,opt,name=end_unix_time,json=endUnixTime,proto3" json:"end_unix_time,omitempty"`
+	// number of processed commits
+	Commits int32 `protobuf:"varint,6,opt,name=commits,proto3" json:"commits,omitempty"`
+	// duration of the analysis in milliseconds
+	RunTime int64 `protobuf:"varint,7,opt,name=run_time,json=runTime,proto3" json:"run_time,omitempty"`
+	// time taken by each pipeline item in seconds
+	RunTimePerItem map[string]float64 `protobuf:"bytes,8,rep,name=run_time_per_item,json=runTimePerItem,proto3" json:"run_time_per_item,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Metadata) Reset() {
 	*x = Metadata{}
-	mi := &file_pb_proto_msgTypes[3]
+	mi := &file_pb_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -256,7 +408,7 @@ func (x *Metadata) String() string {
 func (*Metadata) ProtoMessage() {}
 
 func (x *Metadata) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[3]
+	mi := &file_pb_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -269,7 +421,7 @@ func (x *Metadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Metadata.ProtoReflect.Descriptor instead.
 func (*Metadata) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{3}
+	return file_pb_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Metadata) GetVersion() int32 {
@@ -321,18 +473,127 @@ func (x *Metadata) GetRunTime() int64 {
 	return 0
 }
 
-// File coupling analysis results
+func (x *Metadata) GetRunTimePerItem() map[string]float64 {
+	if x != nil {
+		return x.RunTimePerItem
+	}
+	return nil
+}
+
+// Couples analysis results
+type Couples struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name of each `matrix`'s row and column
+	Index []string `protobuf:"bytes,1,rep,name=index,proto3" json:"index,omitempty"`
+	// is always square
+	Matrix        *CompressedSparseRowMatrix `protobuf:"bytes,2,opt,name=matrix,proto3" json:"matrix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Couples) Reset() {
+	*x = Couples{}
+	mi := &file_pb_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Couples) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Couples) ProtoMessage() {}
+
+func (x *Couples) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Couples.ProtoReflect.Descriptor instead.
+func (*Couples) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Couples) GetIndex() []string {
+	if x != nil {
+		return x.Index
+	}
+	return nil
+}
+
+func (x *Couples) GetMatrix() *CompressedSparseRowMatrix {
+	if x != nil {
+		return x.Matrix
+	}
+	return nil
+}
+
+type TouchedFiles struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Files         []int32                `protobuf:"varint,1,rep,packed,name=files,proto3" json:"files,omitempty"` // values correspond to `file_couples::index`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TouchedFiles) Reset() {
+	*x = TouchedFiles{}
+	mi := &file_pb_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TouchedFiles) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TouchedFiles) ProtoMessage() {}
+
+func (x *TouchedFiles) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TouchedFiles.ProtoReflect.Descriptor instead.
+func (*TouchedFiles) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *TouchedFiles) GetFiles() []int32 {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
 type CouplesAnalysisResults struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	FileCouples   *CompressedSparseRowMatrix `protobuf:"bytes,1,opt,name=file_couples,json=fileCouples,proto3" json:"file_couples,omitempty"`
-	FileNames     []string                   `protobuf:"bytes,2,rep,name=file_names,json=fileNames,proto3" json:"file_names,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FileCouples   *Couples               `protobuf:"bytes,6,opt,name=file_couples,json=fileCouples,proto3" json:"file_couples,omitempty"`
+	PeopleCouples *Couples               `protobuf:"bytes,7,opt,name=people_couples,json=peopleCouples,proto3" json:"people_couples,omitempty"`
+	// order corresponds to `people_couples::index`
+	PeopleFiles []*TouchedFiles `protobuf:"bytes,8,rep,name=people_files,json=peopleFiles,proto3" json:"people_files,omitempty"`
+	// order corresponds to `file_couples::index`
+	FilesLines    []int32 `protobuf:"varint,9,rep,packed,name=files_lines,json=filesLines,proto3" json:"files_lines,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CouplesAnalysisResults) Reset() {
 	*x = CouplesAnalysisResults{}
-	mi := &file_pb_proto_msgTypes[4]
+	mi := &file_pb_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -344,7 +605,7 @@ func (x *CouplesAnalysisResults) String() string {
 func (*CouplesAnalysisResults) ProtoMessage() {}
 
 func (x *CouplesAnalysisResults) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[4]
+	mi := &file_pb_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -357,24 +618,38 @@ func (x *CouplesAnalysisResults) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CouplesAnalysisResults.ProtoReflect.Descriptor instead.
 func (*CouplesAnalysisResults) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{4}
+	return file_pb_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *CouplesAnalysisResults) GetFileCouples() *CompressedSparseRowMatrix {
+func (x *CouplesAnalysisResults) GetFileCouples() *Couples {
 	if x != nil {
 		return x.FileCouples
 	}
 	return nil
 }
 
-func (x *CouplesAnalysisResults) GetFileNames() []string {
+func (x *CouplesAnalysisResults) GetPeopleCouples() *Couples {
 	if x != nil {
-		return x.FileNames
+		return x.PeopleCouples
 	}
 	return nil
 }
 
-// Developer statistics
+func (x *CouplesAnalysisResults) GetPeopleFiles() []*TouchedFiles {
+	if x != nil {
+		return x.PeopleFiles
+	}
+	return nil
+}
+
+func (x *CouplesAnalysisResults) GetFilesLines() []int32 {
+	if x != nil {
+		return x.FilesLines
+	}
+	return nil
+}
+
+// Developer statistics (simplified version - full version in hercules has nested structures)
 type DeveloperStat struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -390,7 +665,7 @@ type DeveloperStat struct {
 
 func (x *DeveloperStat) Reset() {
 	*x = DeveloperStat{}
-	mi := &file_pb_proto_msgTypes[5]
+	mi := &file_pb_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -402,7 +677,7 @@ func (x *DeveloperStat) String() string {
 func (*DeveloperStat) ProtoMessage() {}
 
 func (x *DeveloperStat) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[5]
+	mi := &file_pb_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -415,7 +690,7 @@ func (x *DeveloperStat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeveloperStat.ProtoReflect.Descriptor instead.
 func (*DeveloperStat) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{5}
+	return file_pb_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeveloperStat) GetName() string {
@@ -478,7 +753,7 @@ type LanguageStat struct {
 
 func (x *LanguageStat) Reset() {
 	*x = LanguageStat{}
-	mi := &file_pb_proto_msgTypes[6]
+	mi := &file_pb_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -490,7 +765,7 @@ func (x *LanguageStat) String() string {
 func (*LanguageStat) ProtoMessage() {}
 
 func (x *LanguageStat) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[6]
+	mi := &file_pb_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -503,7 +778,7 @@ func (x *LanguageStat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LanguageStat.ProtoReflect.Descriptor instead.
 func (*LanguageStat) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{6}
+	return file_pb_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LanguageStat) GetLanguage() string {
@@ -516,6 +791,236 @@ func (x *LanguageStat) GetLanguage() string {
 func (x *LanguageStat) GetLines() int64 {
 	if x != nil {
 		return x.Lines
+	}
+	return 0
+}
+
+// Line statistics for commits/developers
+type LineStats struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Added         int32                  `protobuf:"varint,1,opt,name=added,proto3" json:"added,omitempty"`
+	Removed       int32                  `protobuf:"varint,2,opt,name=removed,proto3" json:"removed,omitempty"`
+	Changed       int32                  `protobuf:"varint,3,opt,name=changed,proto3" json:"changed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LineStats) Reset() {
+	*x = LineStats{}
+	mi := &file_pb_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LineStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LineStats) ProtoMessage() {}
+
+func (x *LineStats) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LineStats.ProtoReflect.Descriptor instead.
+func (*LineStats) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *LineStats) GetAdded() int32 {
+	if x != nil {
+		return x.Added
+	}
+	return 0
+}
+
+func (x *LineStats) GetRemoved() int32 {
+	if x != nil {
+		return x.Removed
+	}
+	return 0
+}
+
+func (x *LineStats) GetChanged() int32 {
+	if x != nil {
+		return x.Changed
+	}
+	return 0
+}
+
+// Developer tick data
+type DevTick struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Commits       int32                  `protobuf:"varint,1,opt,name=commits,proto3" json:"commits,omitempty"`
+	Stats         *LineStats             `protobuf:"bytes,2,opt,name=stats,proto3" json:"stats,omitempty"`
+	Languages     map[string]*LineStats  `protobuf:"bytes,3,rep,name=languages,proto3" json:"languages,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DevTick) Reset() {
+	*x = DevTick{}
+	mi := &file_pb_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DevTick) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DevTick) ProtoMessage() {}
+
+func (x *DevTick) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DevTick.ProtoReflect.Descriptor instead.
+func (*DevTick) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DevTick) GetCommits() int32 {
+	if x != nil {
+		return x.Commits
+	}
+	return 0
+}
+
+func (x *DevTick) GetStats() *LineStats {
+	if x != nil {
+		return x.Stats
+	}
+	return nil
+}
+
+func (x *DevTick) GetLanguages() map[string]*LineStats {
+	if x != nil {
+		return x.Languages
+	}
+	return nil
+}
+
+// All developers for a specific tick
+type TickDevs struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Devs          map[int32]*DevTick     `protobuf:"bytes,1,rep,name=devs,proto3" json:"devs,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TickDevs) Reset() {
+	*x = TickDevs{}
+	mi := &file_pb_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TickDevs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TickDevs) ProtoMessage() {}
+
+func (x *TickDevs) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TickDevs.ProtoReflect.Descriptor instead.
+func (*TickDevs) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *TickDevs) GetDevs() map[int32]*DevTick {
+	if x != nil {
+		return x.Devs
+	}
+	return nil
+}
+
+// Developer analysis results
+type DevsAnalysisResults struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Ticks map[int32]*TickDevs    `protobuf:"bytes,1,rep,name=ticks,proto3" json:"ticks,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// developer identities, the indexes correspond to TickDevs' keys.
+	DevIndex []string `protobuf:"bytes,2,rep,name=dev_index,json=devIndex,proto3" json:"dev_index,omitempty"`
+	// how long each tick is, as an int64 nanosecond count (Go's time.Duration)
+	TickSize      int64 `protobuf:"varint,8,opt,name=tick_size,json=tickSize,proto3" json:"tick_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DevsAnalysisResults) Reset() {
+	*x = DevsAnalysisResults{}
+	mi := &file_pb_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DevsAnalysisResults) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DevsAnalysisResults) ProtoMessage() {}
+
+func (x *DevsAnalysisResults) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DevsAnalysisResults.ProtoReflect.Descriptor instead.
+func (*DevsAnalysisResults) Descriptor() ([]byte, []int) {
+	return file_pb_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *DevsAnalysisResults) GetTicks() map[int32]*TickDevs {
+	if x != nil {
+		return x.Ticks
+	}
+	return nil
+}
+
+func (x *DevsAnalysisResults) GetDevIndex() []string {
+	if x != nil {
+		return x.DevIndex
+	}
+	return nil
+}
+
+func (x *DevsAnalysisResults) GetTickSize() int64 {
+	if x != nil {
+		return x.TickSize
 	}
 	return 0
 }
@@ -533,7 +1038,7 @@ type ShotnessRecord struct {
 
 func (x *ShotnessRecord) Reset() {
 	*x = ShotnessRecord{}
-	mi := &file_pb_proto_msgTypes[7]
+	mi := &file_pb_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -545,7 +1050,7 @@ func (x *ShotnessRecord) String() string {
 func (*ShotnessRecord) ProtoMessage() {}
 
 func (x *ShotnessRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[7]
+	mi := &file_pb_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -558,7 +1063,7 @@ func (x *ShotnessRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShotnessRecord.ProtoReflect.Descriptor instead.
 func (*ShotnessRecord) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{7}
+	return file_pb_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ShotnessRecord) GetType() string {
@@ -599,7 +1104,7 @@ type ShotnessAnalysisResults struct {
 
 func (x *ShotnessAnalysisResults) Reset() {
 	*x = ShotnessAnalysisResults{}
-	mi := &file_pb_proto_msgTypes[8]
+	mi := &file_pb_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -611,7 +1116,7 @@ func (x *ShotnessAnalysisResults) String() string {
 func (*ShotnessAnalysisResults) ProtoMessage() {}
 
 func (x *ShotnessAnalysisResults) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[8]
+	mi := &file_pb_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -624,7 +1129,7 @@ func (x *ShotnessAnalysisResults) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShotnessAnalysisResults.ProtoReflect.Descriptor instead.
 func (*ShotnessAnalysisResults) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{8}
+	return file_pb_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ShotnessAnalysisResults) GetRecords() []*ShotnessRecord {
@@ -636,22 +1141,17 @@ func (x *ShotnessAnalysisResults) GetRecords() []*ShotnessRecord {
 
 // Comprehensive analysis results that can contain multiple analysis types
 type AnalysisResults struct {
-	state          protoimpl.MessageState   `protogen:"open.v1"`
-	Metadata       *Metadata                `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Burndown       *BurndownAnalysisResults `protobuf:"bytes,2,opt,name=burndown,proto3" json:"burndown,omitempty"`
-	Couples        *CouplesAnalysisResults  `protobuf:"bytes,3,opt,name=couples,proto3" json:"couples,omitempty"`
-	DeveloperStats []*DeveloperStat         `protobuf:"bytes,4,rep,name=developer_stats,json=developerStats,proto3" json:"developer_stats,omitempty"`
-	LanguageStats  []*LanguageStat          `protobuf:"bytes,5,rep,name=language_stats,json=languageStats,proto3" json:"language_stats,omitempty"`
-	PeopleNames    []string                 `protobuf:"bytes,6,rep,name=people_names,json=peopleNames,proto3" json:"people_names,omitempty"`
-	FileNames      []string                 `protobuf:"bytes,7,rep,name=file_names,json=fileNames,proto3" json:"file_names,omitempty"`
-	Shotness       *ShotnessAnalysisResults `protobuf:"bytes,8,opt,name=shotness,proto3" json:"shotness,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Header *Metadata              `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
+	// the mapped values are dynamic messages which require the second parsing pass.
+	Contents      map[string][]byte `protobuf:"bytes,2,rep,name=contents,proto3" json:"contents,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AnalysisResults) Reset() {
 	*x = AnalysisResults{}
-	mi := &file_pb_proto_msgTypes[9]
+	mi := &file_pb_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -663,7 +1163,7 @@ func (x *AnalysisResults) String() string {
 func (*AnalysisResults) ProtoMessage() {}
 
 func (x *AnalysisResults) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_proto_msgTypes[9]
+	mi := &file_pb_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -676,61 +1176,19 @@ func (x *AnalysisResults) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalysisResults.ProtoReflect.Descriptor instead.
 func (*AnalysisResults) Descriptor() ([]byte, []int) {
-	return file_pb_proto_rawDescGZIP(), []int{9}
+	return file_pb_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *AnalysisResults) GetMetadata() *Metadata {
+func (x *AnalysisResults) GetHeader() *Metadata {
 	if x != nil {
-		return x.Metadata
+		return x.Header
 	}
 	return nil
 }
 
-func (x *AnalysisResults) GetBurndown() *BurndownAnalysisResults {
+func (x *AnalysisResults) GetContents() map[string][]byte {
 	if x != nil {
-		return x.Burndown
-	}
-	return nil
-}
-
-func (x *AnalysisResults) GetCouples() *CouplesAnalysisResults {
-	if x != nil {
-		return x.Couples
-	}
-	return nil
-}
-
-func (x *AnalysisResults) GetDeveloperStats() []*DeveloperStat {
-	if x != nil {
-		return x.DeveloperStats
-	}
-	return nil
-}
-
-func (x *AnalysisResults) GetLanguageStats() []*LanguageStat {
-	if x != nil {
-		return x.LanguageStats
-	}
-	return nil
-}
-
-func (x *AnalysisResults) GetPeopleNames() []string {
-	if x != nil {
-		return x.PeopleNames
-	}
-	return nil
-}
-
-func (x *AnalysisResults) GetFileNames() []string {
-	if x != nil {
-		return x.FileNames
-	}
-	return nil
-}
-
-func (x *AnalysisResults) GetShotness() *ShotnessAnalysisResults {
-	if x != nil {
-		return x.Shotness
+		return x.Contents
 	}
 	return nil
 }
@@ -739,14 +1197,23 @@ var File_pb_proto protoreflect.FileDescriptor
 
 const file_pb_proto_rawDesc = "" +
 	"\n" +
-	"\bpb.proto\x12\x02pb\"\xe6\x02\n" +
-	"\x17BurndownAnalysisResults\x127\n" +
-	"\aproject\x18\x01 \x01(\v2\x1d.pb.CompressedSparseRowMatrixR\aproject\x123\n" +
-	"\x05files\x18\x02 \x01(\v2\x1d.pb.CompressedSparseRowMatrixR\x05files\x125\n" +
-	"\x06people\x18\x03 \x01(\v2\x1d.pb.CompressedSparseRowMatrixR\x06people\x12L\n" +
-	"\x12people_interaction\x18\x04 \x01(\v2\x1d.pb.CompressedSparseRowMatrixR\x11peopleInteraction\x12;\n" +
-	"\x0ffiles_ownership\x18\x05 \x01(\v2\x12.pb.FilesOwnershipR\x0efilesOwnership\x12\x1b\n" +
-	"\ttick_size\x18\x06 \x01(\x05R\btickSize\"\xb3\x01\n" +
+	"\bpb.proto\x12\x02pb\"3\n" +
+	"\x17BurndownSparseMatrixRow\x12\x18\n" +
+	"\acolumns\x18\x01 \x03(\rR\acolumns\"\xad\x01\n" +
+	"\x14BurndownSparseMatrix\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12$\n" +
+	"\x0enumber_of_rows\x18\x02 \x01(\x05R\fnumberOfRows\x12*\n" +
+	"\x11number_of_columns\x18\x03 \x01(\x05R\x0fnumberOfColumns\x12/\n" +
+	"\x04rows\x18\x04 \x03(\v2\x1b.pb.BurndownSparseMatrixRowR\x04rows\"\x95\x03\n" +
+	"\x17BurndownAnalysisResults\x12 \n" +
+	"\vgranularity\x18\x01 \x01(\x05R\vgranularity\x12\x1a\n" +
+	"\bsampling\x18\x02 \x01(\x05R\bsampling\x122\n" +
+	"\aproject\x18\x03 \x01(\v2\x18.pb.BurndownSparseMatrixR\aproject\x12.\n" +
+	"\x05files\x18\x04 \x03(\v2\x18.pb.BurndownSparseMatrixR\x05files\x120\n" +
+	"\x06people\x18\x05 \x03(\v2\x18.pb.BurndownSparseMatrixR\x06people\x12L\n" +
+	"\x12people_interaction\x18\x06 \x01(\v2\x1d.pb.CompressedSparseRowMatrixR\x11peopleInteraction\x12;\n" +
+	"\x0ffiles_ownership\x18\a \x03(\v2\x12.pb.FilesOwnershipR\x0efilesOwnership\x12\x1b\n" +
+	"\ttick_size\x18\b \x01(\x03R\btickSize\"\xb3\x01\n" +
 	"\x19CompressedSparseRowMatrix\x12$\n" +
 	"\x0enumber_of_rows\x18\x01 \x01(\x05R\fnumberOfRows\x12*\n" +
 	"\x11number_of_columns\x18\x02 \x01(\x05R\x0fnumberOfColumns\x12\x12\n" +
@@ -757,8 +1224,8 @@ const file_pb_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x03(\v2\x1d.pb.FilesOwnership.ValueEntryR\x05value\x1a8\n" +
 	"\n" +
 	"ValueEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xd9\x01\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xe9\x02\n" +
 	"\bMetadata\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\x12\x12\n" +
 	"\x04hash\x18\x02 \x01(\tR\x04hash\x12\x1e\n" +
@@ -768,11 +1235,22 @@ const file_pb_proto_rawDesc = "" +
 	"\x0fbegin_unix_time\x18\x04 \x01(\x03R\rbeginUnixTime\x12\"\n" +
 	"\rend_unix_time\x18\x05 \x01(\x03R\vendUnixTime\x12\x18\n" +
 	"\acommits\x18\x06 \x01(\x05R\acommits\x12\x19\n" +
-	"\brun_time\x18\a \x01(\x03R\arunTime\"y\n" +
-	"\x16CouplesAnalysisResults\x12@\n" +
-	"\ffile_couples\x18\x01 \x01(\v2\x1d.pb.CompressedSparseRowMatrixR\vfileCouples\x12\x1d\n" +
-	"\n" +
-	"file_names\x18\x02 \x03(\tR\tfileNames\"\xcd\x02\n" +
+	"\brun_time\x18\a \x01(\x03R\arunTime\x12K\n" +
+	"\x11run_time_per_item\x18\b \x03(\v2 .pb.Metadata.RunTimePerItemEntryR\x0erunTimePerItem\x1aA\n" +
+	"\x13RunTimePerItemEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"V\n" +
+	"\aCouples\x12\x14\n" +
+	"\x05index\x18\x01 \x03(\tR\x05index\x125\n" +
+	"\x06matrix\x18\x02 \x01(\v2\x1d.pb.CompressedSparseRowMatrixR\x06matrix\"$\n" +
+	"\fTouchedFiles\x12\x14\n" +
+	"\x05files\x18\x01 \x03(\x05R\x05files\"\xd2\x01\n" +
+	"\x16CouplesAnalysisResults\x12.\n" +
+	"\ffile_couples\x18\x06 \x01(\v2\v.pb.CouplesR\vfileCouples\x122\n" +
+	"\x0epeople_couples\x18\a \x01(\v2\v.pb.CouplesR\rpeopleCouples\x123\n" +
+	"\fpeople_files\x18\b \x03(\v2\x10.pb.TouchedFilesR\vpeopleFiles\x12\x1f\n" +
+	"\vfiles_lines\x18\t \x03(\x05R\n" +
+	"filesLines\"\xcd\x02\n" +
 	"\rDeveloperStat\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\acommits\x18\x02 \x01(\x05R\acommits\x12\x1f\n" +
@@ -787,7 +1265,31 @@ const file_pb_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"@\n" +
 	"\fLanguageStat\x12\x1a\n" +
 	"\blanguage\x18\x01 \x01(\tR\blanguage\x12\x14\n" +
-	"\x05lines\x18\x02 \x01(\x03R\x05lines\"\xc7\x01\n" +
+	"\x05lines\x18\x02 \x01(\x03R\x05lines\"U\n" +
+	"\tLineStats\x12\x14\n" +
+	"\x05added\x18\x01 \x01(\x05R\x05added\x12\x18\n" +
+	"\aremoved\x18\x02 \x01(\x05R\aremoved\x12\x18\n" +
+	"\achanged\x18\x03 \x01(\x05R\achanged\"\xcf\x01\n" +
+	"\aDevTick\x12\x18\n" +
+	"\acommits\x18\x01 \x01(\x05R\acommits\x12#\n" +
+	"\x05stats\x18\x02 \x01(\v2\r.pb.LineStatsR\x05stats\x128\n" +
+	"\tlanguages\x18\x03 \x03(\v2\x1a.pb.DevTick.LanguagesEntryR\tlanguages\x1aK\n" +
+	"\x0eLanguagesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12#\n" +
+	"\x05value\x18\x02 \x01(\v2\r.pb.LineStatsR\x05value:\x028\x01\"|\n" +
+	"\bTickDevs\x12*\n" +
+	"\x04devs\x18\x01 \x03(\v2\x16.pb.TickDevs.DevsEntryR\x04devs\x1aD\n" +
+	"\tDevsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12!\n" +
+	"\x05value\x18\x02 \x01(\v2\v.pb.DevTickR\x05value:\x028\x01\"\xd1\x01\n" +
+	"\x13DevsAnalysisResults\x128\n" +
+	"\x05ticks\x18\x01 \x03(\v2\".pb.DevsAnalysisResults.TicksEntryR\x05ticks\x12\x1b\n" +
+	"\tdev_index\x18\x02 \x03(\tR\bdevIndex\x12\x1b\n" +
+	"\ttick_size\x18\b \x01(\x03R\btickSize\x1aF\n" +
+	"\n" +
+	"TicksEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\"\n" +
+	"\x05value\x18\x02 \x01(\v2\f.pb.TickDevsR\x05value:\x028\x01\"\xc7\x01\n" +
 	"\x0eShotnessRecord\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -797,17 +1299,13 @@ const file_pb_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"G\n" +
 	"\x17ShotnessAnalysisResults\x12,\n" +
-	"\arecords\x18\x01 \x03(\v2\x12.pb.ShotnessRecordR\arecords\"\x9a\x03\n" +
-	"\x0fAnalysisResults\x12(\n" +
-	"\bmetadata\x18\x01 \x01(\v2\f.pb.MetadataR\bmetadata\x127\n" +
-	"\bburndown\x18\x02 \x01(\v2\x1b.pb.BurndownAnalysisResultsR\bburndown\x124\n" +
-	"\acouples\x18\x03 \x01(\v2\x1a.pb.CouplesAnalysisResultsR\acouples\x12:\n" +
-	"\x0fdeveloper_stats\x18\x04 \x03(\v2\x11.pb.DeveloperStatR\x0edeveloperStats\x127\n" +
-	"\x0elanguage_stats\x18\x05 \x03(\v2\x10.pb.LanguageStatR\rlanguageStats\x12!\n" +
-	"\fpeople_names\x18\x06 \x03(\tR\vpeopleNames\x12\x1d\n" +
-	"\n" +
-	"file_names\x18\a \x03(\tR\tfileNames\x127\n" +
-	"\bshotness\x18\b \x01(\v2\x1b.pb.ShotnessAnalysisResultsR\bshotnessB\x18Z\x16labours-go/internal/pbb\x06proto3"
+	"\arecords\x18\x01 \x03(\v2\x12.pb.ShotnessRecordR\arecords\"\xb3\x01\n" +
+	"\x0fAnalysisResults\x12$\n" +
+	"\x06header\x18\x01 \x01(\v2\f.pb.MetadataR\x06header\x12=\n" +
+	"\bcontents\x18\x02 \x03(\v2!.pb.AnalysisResults.ContentsEntryR\bcontents\x1a;\n" +
+	"\rContentsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01B\x18Z\x16labours-go/internal/pbb\x06proto3"
 
 var (
 	file_pb_proto_rawDescOnce sync.Once
@@ -821,44 +1319,65 @@ func file_pb_proto_rawDescGZIP() []byte {
 	return file_pb_proto_rawDescData
 }
 
-var file_pb_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_pb_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_pb_proto_goTypes = []any{
-	(*BurndownAnalysisResults)(nil),   // 0: pb.BurndownAnalysisResults
-	(*CompressedSparseRowMatrix)(nil), // 1: pb.CompressedSparseRowMatrix
-	(*FilesOwnership)(nil),            // 2: pb.FilesOwnership
-	(*Metadata)(nil),                  // 3: pb.Metadata
-	(*CouplesAnalysisResults)(nil),    // 4: pb.CouplesAnalysisResults
-	(*DeveloperStat)(nil),             // 5: pb.DeveloperStat
-	(*LanguageStat)(nil),              // 6: pb.LanguageStat
-	(*ShotnessRecord)(nil),            // 7: pb.ShotnessRecord
-	(*ShotnessAnalysisResults)(nil),   // 8: pb.ShotnessAnalysisResults
-	(*AnalysisResults)(nil),           // 9: pb.AnalysisResults
-	nil,                               // 10: pb.FilesOwnership.ValueEntry
-	nil,                               // 11: pb.DeveloperStat.LanguagesEntry
-	nil,                               // 12: pb.ShotnessRecord.CountersEntry
+	(*BurndownSparseMatrixRow)(nil),   // 0: pb.BurndownSparseMatrixRow
+	(*BurndownSparseMatrix)(nil),      // 1: pb.BurndownSparseMatrix
+	(*BurndownAnalysisResults)(nil),   // 2: pb.BurndownAnalysisResults
+	(*CompressedSparseRowMatrix)(nil), // 3: pb.CompressedSparseRowMatrix
+	(*FilesOwnership)(nil),            // 4: pb.FilesOwnership
+	(*Metadata)(nil),                  // 5: pb.Metadata
+	(*Couples)(nil),                   // 6: pb.Couples
+	(*TouchedFiles)(nil),              // 7: pb.TouchedFiles
+	(*CouplesAnalysisResults)(nil),    // 8: pb.CouplesAnalysisResults
+	(*DeveloperStat)(nil),             // 9: pb.DeveloperStat
+	(*LanguageStat)(nil),              // 10: pb.LanguageStat
+	(*LineStats)(nil),                 // 11: pb.LineStats
+	(*DevTick)(nil),                   // 12: pb.DevTick
+	(*TickDevs)(nil),                  // 13: pb.TickDevs
+	(*DevsAnalysisResults)(nil),       // 14: pb.DevsAnalysisResults
+	(*ShotnessRecord)(nil),            // 15: pb.ShotnessRecord
+	(*ShotnessAnalysisResults)(nil),   // 16: pb.ShotnessAnalysisResults
+	(*AnalysisResults)(nil),           // 17: pb.AnalysisResults
+	nil,                               // 18: pb.FilesOwnership.ValueEntry
+	nil,                               // 19: pb.Metadata.RunTimePerItemEntry
+	nil,                               // 20: pb.DeveloperStat.LanguagesEntry
+	nil,                               // 21: pb.DevTick.LanguagesEntry
+	nil,                               // 22: pb.TickDevs.DevsEntry
+	nil,                               // 23: pb.DevsAnalysisResults.TicksEntry
+	nil,                               // 24: pb.ShotnessRecord.CountersEntry
+	nil,                               // 25: pb.AnalysisResults.ContentsEntry
 }
 var file_pb_proto_depIdxs = []int32{
-	1,  // 0: pb.BurndownAnalysisResults.project:type_name -> pb.CompressedSparseRowMatrix
-	1,  // 1: pb.BurndownAnalysisResults.files:type_name -> pb.CompressedSparseRowMatrix
-	1,  // 2: pb.BurndownAnalysisResults.people:type_name -> pb.CompressedSparseRowMatrix
-	1,  // 3: pb.BurndownAnalysisResults.people_interaction:type_name -> pb.CompressedSparseRowMatrix
-	2,  // 4: pb.BurndownAnalysisResults.files_ownership:type_name -> pb.FilesOwnership
-	10, // 5: pb.FilesOwnership.value:type_name -> pb.FilesOwnership.ValueEntry
-	1,  // 6: pb.CouplesAnalysisResults.file_couples:type_name -> pb.CompressedSparseRowMatrix
-	11, // 7: pb.DeveloperStat.languages:type_name -> pb.DeveloperStat.LanguagesEntry
-	12, // 8: pb.ShotnessRecord.counters:type_name -> pb.ShotnessRecord.CountersEntry
-	7,  // 9: pb.ShotnessAnalysisResults.records:type_name -> pb.ShotnessRecord
-	3,  // 10: pb.AnalysisResults.metadata:type_name -> pb.Metadata
-	0,  // 11: pb.AnalysisResults.burndown:type_name -> pb.BurndownAnalysisResults
-	4,  // 12: pb.AnalysisResults.couples:type_name -> pb.CouplesAnalysisResults
-	5,  // 13: pb.AnalysisResults.developer_stats:type_name -> pb.DeveloperStat
-	6,  // 14: pb.AnalysisResults.language_stats:type_name -> pb.LanguageStat
-	8,  // 15: pb.AnalysisResults.shotness:type_name -> pb.ShotnessAnalysisResults
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	0,  // 0: pb.BurndownSparseMatrix.rows:type_name -> pb.BurndownSparseMatrixRow
+	1,  // 1: pb.BurndownAnalysisResults.project:type_name -> pb.BurndownSparseMatrix
+	1,  // 2: pb.BurndownAnalysisResults.files:type_name -> pb.BurndownSparseMatrix
+	1,  // 3: pb.BurndownAnalysisResults.people:type_name -> pb.BurndownSparseMatrix
+	3,  // 4: pb.BurndownAnalysisResults.people_interaction:type_name -> pb.CompressedSparseRowMatrix
+	4,  // 5: pb.BurndownAnalysisResults.files_ownership:type_name -> pb.FilesOwnership
+	18, // 6: pb.FilesOwnership.value:type_name -> pb.FilesOwnership.ValueEntry
+	19, // 7: pb.Metadata.run_time_per_item:type_name -> pb.Metadata.RunTimePerItemEntry
+	3,  // 8: pb.Couples.matrix:type_name -> pb.CompressedSparseRowMatrix
+	6,  // 9: pb.CouplesAnalysisResults.file_couples:type_name -> pb.Couples
+	6,  // 10: pb.CouplesAnalysisResults.people_couples:type_name -> pb.Couples
+	7,  // 11: pb.CouplesAnalysisResults.people_files:type_name -> pb.TouchedFiles
+	20, // 12: pb.DeveloperStat.languages:type_name -> pb.DeveloperStat.LanguagesEntry
+	11, // 13: pb.DevTick.stats:type_name -> pb.LineStats
+	21, // 14: pb.DevTick.languages:type_name -> pb.DevTick.LanguagesEntry
+	22, // 15: pb.TickDevs.devs:type_name -> pb.TickDevs.DevsEntry
+	23, // 16: pb.DevsAnalysisResults.ticks:type_name -> pb.DevsAnalysisResults.TicksEntry
+	24, // 17: pb.ShotnessRecord.counters:type_name -> pb.ShotnessRecord.CountersEntry
+	15, // 18: pb.ShotnessAnalysisResults.records:type_name -> pb.ShotnessRecord
+	5,  // 19: pb.AnalysisResults.header:type_name -> pb.Metadata
+	25, // 20: pb.AnalysisResults.contents:type_name -> pb.AnalysisResults.ContentsEntry
+	11, // 21: pb.DevTick.LanguagesEntry.value:type_name -> pb.LineStats
+	12, // 22: pb.TickDevs.DevsEntry.value:type_name -> pb.DevTick
+	13, // 23: pb.DevsAnalysisResults.TicksEntry.value:type_name -> pb.TickDevs
+	24, // [24:24] is the sub-list for method output_type
+	24, // [24:24] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_pb_proto_init() }
@@ -872,7 +1391,7 @@ func file_pb_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pb_proto_rawDesc), len(file_pb_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

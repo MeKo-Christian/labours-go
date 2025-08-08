@@ -45,92 +45,90 @@ func (r *ProtobufReader) Read(file io.Reader) error {
 
 // GetName retrieves the repository name from the Protobuf metadata
 func (r *ProtobufReader) GetName() string {
-	if r.data.Metadata != nil {
-		return r.data.Metadata.Repository
+	if r.data.Header != nil {
+		return r.data.Header.Repository
 	}
 	return ""
 }
 
 // GetHeader retrieves the start and end timestamps from the Protobuf metadata
 func (r *ProtobufReader) GetHeader() (int64, int64) {
-	if r.data.Metadata != nil {
-		return r.data.Metadata.BeginUnixTime, r.data.Metadata.EndUnixTime
+	if r.data.Header != nil {
+		return r.data.Header.BeginUnixTime, r.data.Header.EndUnixTime
 	}
 	return 0, 0
 }
 
 // GetProjectBurndown retrieves the project-level burndown matrix
 func (r *ProtobufReader) GetProjectBurndown() (string, [][]int) {
-	if r.data.Burndown == nil || r.data.Burndown.Project == nil {
+	// Parse burndown data from Contents
+	burndownData := r.parseBurndownAnalysisResults()
+	if burndownData == nil || burndownData.Project == nil {
 		return "", nil
 	}
 
-	matrix := parseCompressedSparseRowMatrix(r.data.Burndown.Project)
-	return r.GetName(), matrix
+	matrix := parseBurndownSparseMatrix(burndownData.Project)
+	return r.GetName(), transposeMatrix(matrix)
 }
 
 // GetFilesBurndown retrieves burndown data for files
 func (r *ProtobufReader) GetFilesBurndown() ([]FileBurndown, error) {
-	if r.data.Burndown == nil || r.data.Burndown.Files == nil {
+	burndownData := r.parseBurndownAnalysisResults()
+	if burndownData == nil || len(burndownData.Files) == 0 {
 		return nil, fmt.Errorf("no files burndown data found")
 	}
 
-	matrix := parseCompressedSparseRowMatrix(r.data.Burndown.Files)
-
-	// Create individual file burndown entries
+	// Process each file's burndown matrix
 	var fileBurndowns []FileBurndown
-	for i, filename := range r.data.FileNames {
-		if i < len(matrix) {
-			fileBurndowns = append(fileBurndowns, FileBurndown{
-				Filename: filename,
-				Matrix:   [][]int{matrix[i]}, // Each row represents one file
-			})
-		}
+	for _, fileMatrix := range burndownData.Files {
+		matrix := parseBurndownSparseMatrix(fileMatrix)
+		transposed := transposeMatrix(matrix)
+		fileBurndowns = append(fileBurndowns, FileBurndown{
+			Filename: fileMatrix.Name,
+			Matrix:   transposed,
+		})
 	}
 	return fileBurndowns, nil
 }
 
 // GetPeopleBurndown retrieves burndown data for people
 func (r *ProtobufReader) GetPeopleBurndown() ([]PeopleBurndown, error) {
-	if r.data.Burndown == nil || r.data.Burndown.People == nil {
+	burndownData := r.parseBurndownAnalysisResults()
+	if burndownData == nil || len(burndownData.People) == 0 {
 		return nil, fmt.Errorf("no people burndown data found")
 	}
 
-	matrix := parseCompressedSparseRowMatrix(r.data.Burndown.People)
-
-	// Create individual people burndown entries
+	// Process each person's burndown matrix
 	var peopleBurndowns []PeopleBurndown
-	for i, personName := range r.data.PeopleNames {
-		if i < len(matrix) {
-			peopleBurndowns = append(peopleBurndowns, PeopleBurndown{
-				Person: personName,
-				Matrix: [][]int{matrix[i]}, // Each row represents one person
-			})
-		}
+	for _, personMatrix := range burndownData.People {
+		matrix := parseBurndownSparseMatrix(personMatrix)
+		transposed := transposeMatrix(matrix)
+		peopleBurndowns = append(peopleBurndowns, PeopleBurndown{
+			Person: personMatrix.Name,
+			Matrix: transposed,
+		})
 	}
 	return peopleBurndowns, nil
 }
 
 // GetOwnershipBurndown retrieves the ownership matrix and sequence
 func (r *ProtobufReader) GetOwnershipBurndown() ([]string, map[string][][]int, error) {
-	if r.data.Burndown == nil || r.data.Burndown.FilesOwnership == nil {
-		return nil, nil, fmt.Errorf("no ownership data found")
+	// Get people burndown data (matches Python behavior)
+	peopleBurndowns, err := r.GetPeopleBurndown()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get people burndown data: %v", err)
 	}
 
-	peopleSequence := r.data.PeopleNames
+	// Extract people sequence (names) and build ownership map
+	var peopleSequence []string
 	ownership := make(map[string][][]int)
 
-	// Use the files ownership mapping to create ownership matrices
-	for filename, ownerIndex := range r.data.Burndown.FilesOwnership.Value {
-		if int(ownerIndex) < len(peopleSequence) {
-			ownerName := peopleSequence[ownerIndex]
-			if _, exists := ownership[ownerName]; !exists {
-				ownership[ownerName] = [][]int{}
-			}
-			// For simplicity, create a basic matrix - this would need actual data
-			ownership[ownerName] = append(ownership[ownerName], []int{1}) // Placeholder
-		}
-		_ = filename // Avoid unused variable warning
+	for _, peopleBurndown := range peopleBurndowns {
+		peopleSequence = append(peopleSequence, peopleBurndown.Person)
+		
+		// Transpose the matrix to match Python's .T behavior
+		transposedMatrix := transposeMatrix(peopleBurndown.Matrix)
+		ownership[peopleBurndown.Person] = transposedMatrix
 	}
 
 	return peopleSequence, ownership, nil
@@ -138,33 +136,42 @@ func (r *ProtobufReader) GetOwnershipBurndown() ([]string, map[string][][]int, e
 
 // GetPeopleInteraction retrieves the interaction matrix for people
 func (r *ProtobufReader) GetPeopleInteraction() ([]string, [][]int, error) {
-	if r.data.Burndown == nil || r.data.Burndown.PeopleInteraction == nil {
+	burndownData := r.parseBurndownAnalysisResults()
+	if burndownData == nil || burndownData.PeopleInteraction == nil {
 		return nil, nil, fmt.Errorf("no people interaction data found")
 	}
 
-	matrix := parseCompressedSparseRowMatrix(r.data.Burndown.PeopleInteraction)
-	return r.data.PeopleNames, matrix, nil
+	matrix := parseCompressedSparseRowMatrix(burndownData.PeopleInteraction)
+	
+	// Extract people names from the burndown people data
+	var peopleNames []string
+	for _, person := range burndownData.People {
+		peopleNames = append(peopleNames, person.Name)
+	}
+	
+	return peopleNames, matrix, nil
 }
 
 // GetFileCooccurrence retrieves file coupling data
 func (r *ProtobufReader) GetFileCooccurrence() ([]string, [][]int, error) {
-	if r.data.Couples == nil || r.data.Couples.FileCouples == nil {
+	couplesData := r.parseCouplesAnalysisResults()
+	if couplesData == nil || couplesData.FileCouples == nil || couplesData.FileCouples.Matrix == nil {
 		return nil, nil, fmt.Errorf("no file coupling data found")
 	}
 
-	matrix := parseCompressedSparseRowMatrix(r.data.Couples.FileCouples)
-	return r.data.Couples.FileNames, matrix, nil
+	matrix := parseCompressedSparseRowMatrix(couplesData.FileCouples.Matrix)
+	return couplesData.FileCouples.Index, matrix, nil
 }
 
 // GetPeopleCooccurrence retrieves people coupling data
 func (r *ProtobufReader) GetPeopleCooccurrence() ([]string, [][]int, error) {
-	if r.data.Couples == nil {
+	couplesData := r.parseCouplesAnalysisResults()
+	if couplesData == nil || couplesData.PeopleCouples == nil || couplesData.PeopleCouples.Matrix == nil {
 		return nil, nil, fmt.Errorf("no people coupling data found")
 	}
 
-	// For people coupling, we would need additional matrix data in the protobuf
-	// For now, return empty data
-	return r.data.PeopleNames, [][]int{}, nil
+	matrix := parseCompressedSparseRowMatrix(couplesData.PeopleCouples.Matrix)
+	return couplesData.PeopleCouples.Index, matrix, nil
 }
 
 // GetShotnessCooccurrence retrieves shotness coupling data
@@ -175,18 +182,19 @@ func (r *ProtobufReader) GetShotnessCooccurrence() ([]string, [][]int, error) {
 
 // GetShotnessRecords retrieves shotness records
 func (r *ProtobufReader) GetShotnessRecords() ([]ShotnessRecord, error) {
-	if r.data.GetShotness() == nil || len(r.data.GetShotness().GetRecords()) == 0 {
+	shotnessData := r.parseShotnessAnalysisResults()
+	if shotnessData == nil || len(shotnessData.Records) == 0 {
 		return []ShotnessRecord{}, fmt.Errorf("no shotness data found - ensure the input data contains shotness analysis results")
 	}
 
-	pbRecords := r.data.GetShotness().GetRecords()
+	pbRecords := shotnessData.Records
 	records := make([]ShotnessRecord, len(pbRecords))
 	for i, pbRecord := range pbRecords {
 		records[i] = ShotnessRecord{
-			Type:     pbRecord.GetType(),
-			Name:     pbRecord.GetName(),
-			File:     pbRecord.GetFile(),
-			Counters: pbRecord.GetCounters(),
+			Type:     pbRecord.Type,
+			Name:     pbRecord.Name,
+			File:     pbRecord.File,
+			Counters: pbRecord.Counters,
 		}
 	}
 
@@ -195,24 +203,22 @@ func (r *ProtobufReader) GetShotnessRecords() ([]ShotnessRecord, error) {
 
 // GetDeveloperStats retrieves developer statistics
 func (r *ProtobufReader) GetDeveloperStats() ([]DeveloperStat, error) {
-	if len(r.data.DeveloperStats) == 0 {
+	devsData := r.parseDevsAnalysisResults()
+	if devsData == nil || len(devsData.DevIndex) == 0 {
 		return nil, fmt.Errorf("no developer stats found")
 	}
 
-	stats := make([]DeveloperStat, len(r.data.DeveloperStats))
-	for i, dev := range r.data.DeveloperStats {
+	// Create synthetic developer stats from the available data
+	stats := make([]DeveloperStat, len(devsData.DevIndex))
+	for i, devName := range devsData.DevIndex {
 		stats[i] = DeveloperStat{
-			Name:          dev.Name,
-			Commits:       int(dev.Commits),
-			LinesAdded:    int(dev.LinesAdded),
-			LinesRemoved:  int(dev.LinesRemoved),
-			LinesModified: int(dev.LinesModified),
-			FilesTouched:  int(dev.FilesTouched),
+			Name:          devName,
+			Commits:       0, // Would need to aggregate from time series
+			LinesAdded:    0,
+			LinesRemoved:  0,
+			LinesModified: 0,
+			FilesTouched:  0,
 			Languages:     make(map[string]int),
-		}
-		// Copy language map
-		for lang, count := range dev.Languages {
-			stats[i].Languages[lang] = int(count)
 		}
 	}
 
@@ -221,30 +227,120 @@ func (r *ProtobufReader) GetDeveloperStats() ([]DeveloperStat, error) {
 
 // GetLanguageStats retrieves language statistics
 func (r *ProtobufReader) GetLanguageStats() ([]LanguageStat, error) {
-	if len(r.data.LanguageStats) == 0 {
-		return nil, fmt.Errorf("no language stats found")
-	}
-
-	stats := make([]LanguageStat, len(r.data.LanguageStats))
-	for i, lang := range r.data.LanguageStats {
-		stats[i] = LanguageStat{
-			Language: lang.Language,
-			Lines:    int(lang.Lines),
-		}
-	}
-
-	return stats, nil
+	// Language stats might be part of other analysis results
+	// For now, return empty as this data structure may not exist in protobuf
+	return nil, fmt.Errorf("no language stats found in protobuf format")
 }
 
 // GetRuntimeStats retrieves runtime statistics
 func (r *ProtobufReader) GetRuntimeStats() (map[string]float64, error) {
-	if r.data.Metadata == nil {
-		return nil, fmt.Errorf("no metadata found for runtime stats")
+	if r.data.Header == nil {
+		return nil, fmt.Errorf("no header found for runtime stats")
 	}
 
-	return map[string]float64{
-		"total_runtime": float64(r.data.Metadata.RunTime),
+	runtimeStats := make(map[string]float64)
+	if r.data.Header.RunTimePerItem != nil {
+		for key, value := range r.data.Header.RunTimePerItem {
+			runtimeStats[key] = value
+		}
+	}
+
+	return runtimeStats, nil
+}
+
+// GetDeveloperTimeSeriesData returns Python-compatible time series data for protobuf files
+// This now parses real temporal data from DevsAnalysisResults.Ticks (matches Python's approach)
+func (r *ProtobufReader) GetDeveloperTimeSeriesData() (*DeveloperTimeSeriesData, error) {
+	// Parse real developer time series data from protobuf (like Python does)
+	devsData := r.parseDevsAnalysisResults()
+	if devsData == nil {
+		return nil, fmt.Errorf("no developer analysis data found")
+	}
+	
+	// Extract people list from dev_index (matches Python's people = list(self.contents["Devs"].dev_index))
+	people := make([]string, len(devsData.DevIndex))
+	copy(people, devsData.DevIndex)
+	
+	// Parse real time series data from ticks (matches Python's self.contents["Devs"].ticks.items())
+	days := make(map[int]map[int]DevDay)
+	
+	// Iterate through all time ticks
+	for tickKey, tickDevs := range devsData.Ticks {
+		if tickDevs == nil {
+			continue
+		}
+		
+		// Create developer map for this time tick
+		dayDevs := make(map[int]DevDay)
+		
+		// Iterate through all developers in this tick
+		for devIndex, devTick := range tickDevs.Devs {
+			if devTick == nil {
+				continue
+			}
+			
+			// Convert languages map from protobuf format to DevDay format
+			languages := make(map[string][]int)
+			if devTick.Languages != nil {
+				for lang, langStats := range devTick.Languages {
+					if langStats != nil {
+						// Python format: {lang: [added, removed, changed]}
+						languages[lang] = []int{
+							int(langStats.Added),
+							int(langStats.Removed), 
+							int(langStats.Changed),
+						}
+					}
+				}
+			}
+			
+			// Convert protobuf DevTick to Go DevDay format (matches Python's DevDay structure)
+			dayDevs[int(devIndex)] = DevDay{
+				Commits:       int(devTick.Commits),
+				LinesAdded:    int(devTick.Stats.Added),
+				LinesRemoved:  int(devTick.Stats.Removed),
+				LinesModified: int(devTick.Stats.Changed),
+				Languages:     languages,
+			}
+		}
+		
+		// Store this day's data using the real time tick key
+		days[int(tickKey)] = dayDevs
+	}
+	
+	// Return the same format as Python: (people, days)
+	return &DeveloperTimeSeriesData{
+		People: people,
+		Days:   days,
 	}, nil
+}
+
+// parseBurndownSparseMatrix converts protobuf BurndownSparseMatrix to dense matrix
+// This matches the Python _parse_burndown_matrix logic
+func parseBurndownSparseMatrix(matrix *pb.BurndownSparseMatrix) [][]int {
+	if matrix == nil {
+		return [][]int{}
+	}
+
+	result := make([][]int, matrix.NumberOfRows)
+	for i := range result {
+		result[i] = make([]int, matrix.NumberOfColumns)
+	}
+
+	// Convert from row/column format to dense matrix (matches Python logic)
+	for y, row := range matrix.Rows {
+		if y >= int(matrix.NumberOfRows) {
+			break
+		}
+		for x, value := range row.Columns {
+			if x >= int(matrix.NumberOfColumns) {
+				break
+			}
+			result[y][x] = int(value)
+		}
+	}
+
+	return result
 }
 
 // parseCompressedSparseRowMatrix converts protobuf CompressedSparseRowMatrix to dense matrix
@@ -282,22 +378,44 @@ func parseCompressedSparseRowMatrix(matrix *pb.CompressedSparseRowMatrix) [][]in
 	return result
 }
 
+// parseBurndownAnalysisResults extracts and parses burndown data from the Contents map
+func (r *ProtobufReader) parseBurndownAnalysisResults() *pb.BurndownAnalysisResults {
+	if r.data == nil || r.data.Contents == nil {
+		return nil
+	}
+	
+	// Look for burndown data in Contents
+	burndownBytes, exists := r.data.Contents["Burndown"]
+	if !exists {
+		return nil
+	}
+	
+	// Parse the burndown data
+	var burndownData pb.BurndownAnalysisResults
+	if err := proto.Unmarshal(burndownBytes, &burndownData); err != nil {
+		return nil
+	}
+	
+	return &burndownData
+}
+
 // GetBurndownParameters retrieves burndown parameters in Python-compatible format
 func (r *ProtobufReader) GetBurndownParameters() (burndown.BurndownParameters, error) {
-	if r.data.Burndown == nil {
+	burndownData := r.parseBurndownAnalysisResults()
+	if burndownData == nil {
 		return burndown.BurndownParameters{}, fmt.Errorf("no burndown data found")
 	}
 
 	// Calculate appropriate tick size based on time span and matrix dimensions
-	tickSize := float64(r.data.Burndown.TickSize) / 1e9 // Convert nanoseconds to seconds
+	tickSize := float64(burndownData.TickSize) / 1e9 // Convert nanoseconds to seconds
 	
-	if r.data.Metadata != nil {
+	if r.data.Header != nil {
 		// Calculate tick size from actual time span and expected data points
-		timeSpan := float64(r.data.Metadata.EndUnixTime - r.data.Metadata.BeginUnixTime)
+		timeSpan := float64(r.data.Header.EndUnixTime - r.data.Header.BeginUnixTime)
 		
 		// Get matrix dimensions to calculate appropriate tick size
-		if r.data.Burndown.Project != nil {
-			matrixCols := r.data.Burndown.Project.NumberOfColumns
+		if burndownData.Project != nil {
+			matrixCols := burndownData.Project.NumberOfColumns
 			if matrixCols > 1 && timeSpan > 0 {
 				// Calculate tick size as time span divided by number of time points
 				calculatedTick := timeSpan / float64(matrixCols-1)
@@ -326,7 +444,8 @@ func (r *ProtobufReader) GetBurndownParameters() (burndown.BurndownParameters, e
 
 // GetProjectBurndownWithHeader retrieves project burndown with full header info
 func (r *ProtobufReader) GetProjectBurndownWithHeader() (burndown.BurndownHeader, string, [][]int, error) {
-	if r.data.Burndown == nil || r.data.Burndown.Project == nil {
+	burndownData := r.parseBurndownAnalysisResults()
+	if burndownData == nil || burndownData.Project == nil {
 		return burndown.BurndownHeader{}, "", nil, fmt.Errorf("no project burndown data found")
 	}
 
@@ -349,4 +468,67 @@ func (r *ProtobufReader) GetProjectBurndownWithHeader() (burndown.BurndownHeader
 	name, matrix := r.GetProjectBurndown()
 
 	return header, name, matrix, nil
+}
+
+// parseCouplesAnalysisResults extracts and parses couples data from the Contents map
+func (r *ProtobufReader) parseCouplesAnalysisResults() *pb.CouplesAnalysisResults {
+	if r.data == nil || r.data.Contents == nil {
+		return nil
+	}
+	
+	// Look for couples data in Contents
+	couplesBytes, exists := r.data.Contents["Couples"]
+	if !exists {
+		return nil
+	}
+	
+	// Parse the couples data
+	var couplesData pb.CouplesAnalysisResults
+	if err := proto.Unmarshal(couplesBytes, &couplesData); err != nil {
+		return nil
+	}
+	
+	return &couplesData
+}
+
+// parseShotnessAnalysisResults extracts and parses shotness data from the Contents map
+func (r *ProtobufReader) parseShotnessAnalysisResults() *pb.ShotnessAnalysisResults {
+	if r.data == nil || r.data.Contents == nil {
+		return nil
+	}
+	
+	// Look for shotness data in Contents
+	shotnessBytes, exists := r.data.Contents["Shotness"]
+	if !exists {
+		return nil
+	}
+	
+	// Parse the shotness data
+	var shotnessData pb.ShotnessAnalysisResults
+	if err := proto.Unmarshal(shotnessBytes, &shotnessData); err != nil {
+		return nil
+	}
+	
+	return &shotnessData
+}
+
+// parseDevsAnalysisResults extracts and parses devs data from the Contents map
+func (r *ProtobufReader) parseDevsAnalysisResults() *pb.DevsAnalysisResults {
+	if r.data == nil || r.data.Contents == nil {
+		return nil
+	}
+	
+	// Look for devs data in Contents
+	devsBytes, exists := r.data.Contents["Devs"]
+	if !exists {
+		return nil
+	}
+	
+	// Parse the devs data
+	var devsData pb.DevsAnalysisResults
+	if err := proto.Unmarshal(devsBytes, &devsData); err != nil {
+		return nil
+	}
+	
+	return &devsData
 }

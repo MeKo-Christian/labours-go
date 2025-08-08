@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"labours-go/internal/burndown"
 	"labours-go/internal/readers"
 )
 
@@ -32,9 +33,19 @@ func (m *MockLanguageReader) GetShotnessCooccurrence() ([]string, [][]int, error
 func (m *MockLanguageReader) GetShotnessRecords() ([]readers.ShotnessRecord, error) { return nil, nil }
 func (m *MockLanguageReader) GetDeveloperStats() ([]readers.DeveloperStat, error) { return nil, nil }
 func (m *MockLanguageReader) GetRuntimeStats() (map[string]float64, error)       { return nil, nil }
+func (m *MockLanguageReader) GetBurndownParameters() (burndown.BurndownParameters, error) { 
+	return burndown.BurndownParameters{}, nil 
+}
+func (m *MockLanguageReader) GetProjectBurndownWithHeader() (burndown.BurndownHeader, string, [][]int, error) {
+	return burndown.BurndownHeader{}, "", nil, nil
+}
 
 func (m *MockLanguageReader) GetLanguageStats() ([]readers.LanguageStat, error) {
 	return m.languageStats, nil
+}
+
+func (m *MockLanguageReader) GetDeveloperTimeSeriesData() (*readers.DeveloperTimeSeriesData, error) {
+	return nil, nil
 }
 
 func TestLanguages(t *testing.T) {

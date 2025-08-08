@@ -3,20 +3,47 @@ syntax = "proto3";
 package pb;
 option go_package = "labours-go/internal/pb";
 
+// Sparse matrix row for burndown data
+message BurndownSparseMatrixRow {
+    // the first `len(column)` elements are stored,
+    // the rest `number_of_columns - len(column)` values are zeros
+    repeated uint32 columns = 1;
+}
+
+// Burndown-specific sparse matrix representation
+message BurndownSparseMatrix {
+    string name = 1;
+    int32 number_of_rows = 2;
+    int32 number_of_columns = 3;
+    // `len(row)` matches `number_of_rows`
+    repeated BurndownSparseMatrixRow rows = 4;
+}
+
 // Main analysis result container
 message BurndownAnalysisResults {
-    CompressedSparseRowMatrix project = 1;
-    CompressedSparseRowMatrix files = 2;
-    CompressedSparseRowMatrix people = 3;
-    CompressedSparseRowMatrix people_interaction = 4;
-    FilesOwnership files_ownership = 5;
-    int32 tick_size = 6;
+    // how many ticks are in each band [burndown_project, burndown_file, burndown_developer]
+    int32 granularity = 1;
+    // how frequently we measure the state of each band [burndown_project, burndown_file, burndown_developer]
+    int32 sampling = 2;
+    // always exists
+    BurndownSparseMatrix project = 3;
+    // this is included if `--burndown-files` was specified
+    repeated BurndownSparseMatrix files = 4;
+    // these two are included if `--burndown-people` was specified
+    repeated BurndownSparseMatrix people = 5;
+    // rows and cols order correspond to `burndown_developer`
+    CompressedSparseRowMatrix people_interaction = 6;
+    // How many lines belong to relevant developers for each file. The order is the same as in `files`.
+    repeated FilesOwnership files_ownership = 7;
+    // how long each tick is, as an int64 nanosecond count (Go's time.Duration)
+    int64 tick_size = 8;
 }
 
 // Efficient sparse matrix representation using Compressed Sparse Row format
 message CompressedSparseRowMatrix {
     int32 number_of_rows = 1;
     int32 number_of_columns = 2;
+    // https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_.28CSR.2C_CRS_or_Yale_format.29
     repeated int64 data = 3;
     repeated int32 indices = 4;
     repeated int64 indptr = 5;
@@ -24,27 +51,52 @@ message CompressedSparseRowMatrix {
 
 // File ownership data mapping file paths to developer indices
 message FilesOwnership {
-    map<string, int32> value = 1;
+    // The sum always equals to the total number of lines in the file.
+    map<int32, int32> value = 1;
 }
 
 // Repository metadata
 message Metadata {
+    // this format is versioned
     int32 version = 1;
+    // git hash of the revision from which Hercules is built
     string hash = 2;
+    // repository's name
     string repository = 3;
+    // UNIX timestamp of the first analysed commit
     int64 begin_unix_time = 4;
+    // UNIX timestamp of the last analysed commit
     int64 end_unix_time = 5;
+    // number of processed commits
     int32 commits = 6;
+    // duration of the analysis in milliseconds
     int64 run_time = 7;
+    // time taken by each pipeline item in seconds
+    map<string, double> run_time_per_item = 8;
 }
 
-// File coupling analysis results
+// Couples analysis results
+message Couples {
+    // name of each `matrix`'s row and column
+    repeated string index = 1;
+    // is always square
+    CompressedSparseRowMatrix matrix = 2;
+}
+
+message TouchedFiles {
+    repeated int32 files = 1;  // values correspond to `file_couples::index`
+}
+
 message CouplesAnalysisResults {
-    CompressedSparseRowMatrix file_couples = 1;
-    repeated string file_names = 2;
+    Couples file_couples = 6;
+    Couples people_couples = 7;
+    // order corresponds to `people_couples::index`
+    repeated TouchedFiles people_files = 8;
+    // order corresponds to `file_couples::index`
+    repeated int32 files_lines = 9;
 }
 
-// Developer statistics
+// Developer statistics (simplified version - full version in hercules has nested structures)
 message DeveloperStat {
     string name = 1;
     int32 commits = 2;
@@ -59,6 +111,34 @@ message DeveloperStat {
 message LanguageStat {
     string language = 1;
     int64 lines = 2;
+}
+
+// Line statistics for commits/developers
+message LineStats {
+    int32 added = 1;
+    int32 removed = 2;
+    int32 changed = 3;
+}
+
+// Developer tick data
+message DevTick {
+    int32 commits = 1;
+    LineStats stats = 2;
+    map<string, LineStats> languages = 3;
+}
+
+// All developers for a specific tick
+message TickDevs {
+    map<int32, DevTick> devs = 1;
+}
+
+// Developer analysis results
+message DevsAnalysisResults {
+    map<int32, TickDevs> ticks = 1;
+    // developer identities, the indexes correspond to TickDevs' keys.
+    repeated string dev_index = 2;
+    // how long each tick is, as an int64 nanosecond count (Go's time.Duration)
+    int64 tick_size = 8;
 }
 
 // Shotness record for tracking structural unit modifications
@@ -76,12 +156,7 @@ message ShotnessAnalysisResults {
 
 // Comprehensive analysis results that can contain multiple analysis types
 message AnalysisResults {
-    Metadata metadata = 1;
-    BurndownAnalysisResults burndown = 2;
-    CouplesAnalysisResults couples = 3;
-    repeated DeveloperStat developer_stats = 4;
-    repeated LanguageStat language_stats = 5;
-    repeated string people_names = 6;
-    repeated string file_names = 7;
-    ShotnessAnalysisResults shotness = 8;
+    Metadata header = 1;
+    // the mapped values are dynamic messages which require the second parsing pass.
+    map<string, bytes> contents = 2;
 }

@@ -24,6 +24,7 @@ type Reader interface {
 	GetDeveloperStats() ([]DeveloperStat, error)
 	GetLanguageStats() ([]LanguageStat, error)
 	GetRuntimeStats() (map[string]float64, error)
+	GetDeveloperTimeSeriesData() (*DeveloperTimeSeriesData, error)
 }
 
 type FileBurndown struct {
@@ -56,4 +57,19 @@ type ShotnessRecord struct {
 	Name     string            // Name of the structural unit
 	File     string            // File path containing the unit
 	Counters map[int32]int32   // Time-based modification counters
+}
+
+// DevDay represents developer activity for a single day (Python-compatible)
+type DevDay struct {
+	Commits       int                     // Number of commits
+	LinesAdded    int                     // Lines of code added
+	LinesRemoved  int                     // Lines of code removed
+	LinesModified int                     // Lines of code changed
+	Languages     map[string][]int        // Language-specific stats [added, removed, changed]
+}
+
+// DeveloperTimeSeriesData represents Python-compatible developer time series data
+type DeveloperTimeSeriesData struct {
+	People []string              // List of developer names
+	Days   map[int]map[int]DevDay // {day: {dev_index: DevDay}}
 }

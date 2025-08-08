@@ -4,6 +4,8 @@ import (
 	"io"
 	"os"
 	"testing"
+	
+	"labours-go/internal/burndown"
 	"labours-go/internal/readers"
 )
 
@@ -23,6 +25,12 @@ func (m *MockSentimentReader) GetPeopleCooccurrence() ([]string, [][]int, error)
 func (m *MockSentimentReader) GetShotnessCooccurrence() ([]string, [][]int, error) { return nil, nil, nil }
 func (m *MockSentimentReader) GetShotnessRecords() ([]readers.ShotnessRecord, error) { return nil, nil }
 func (m *MockSentimentReader) GetRuntimeStats() (map[string]float64, error) { return nil, nil }
+func (m *MockSentimentReader) GetBurndownParameters() (burndown.BurndownParameters, error) { 
+	return burndown.BurndownParameters{}, nil 
+}
+func (m *MockSentimentReader) GetProjectBurndownWithHeader() (burndown.BurndownHeader, string, [][]int, error) {
+	return burndown.BurndownHeader{}, "", nil, nil
+}
 
 func (m *MockSentimentReader) GetDeveloperStats() ([]readers.DeveloperStat, error) {
 	return []readers.DeveloperStat{
@@ -45,6 +53,10 @@ func (m *MockSentimentReader) GetDeveloperStats() ([]readers.DeveloperStat, erro
 			Languages:     map[string]int{"JavaScript": 300, "CSS": 200},
 		},
 	}, nil
+}
+
+func (m *MockSentimentReader) GetDeveloperTimeSeriesData() (*readers.DeveloperTimeSeriesData, error) {
+	return nil, nil
 }
 
 func (m *MockSentimentReader) GetLanguageStats() ([]readers.LanguageStat, error) {
@@ -107,8 +119,15 @@ func (n *NoDataReader) GetPeopleCooccurrence() ([]string, [][]int, error) { retu
 func (n *NoDataReader) GetShotnessCooccurrence() ([]string, [][]int, error) { return nil, nil, nil }
 func (n *NoDataReader) GetShotnessRecords() ([]readers.ShotnessRecord, error) { return nil, nil }
 func (n *NoDataReader) GetRuntimeStats() (map[string]float64, error) { return nil, nil }
+func (n *NoDataReader) GetBurndownParameters() (burndown.BurndownParameters, error) { 
+	return burndown.BurndownParameters{}, nil 
+}
+func (n *NoDataReader) GetProjectBurndownWithHeader() (burndown.BurndownHeader, string, [][]int, error) {
+	return burndown.BurndownHeader{}, "", nil, nil
+}
 func (n *NoDataReader) GetDeveloperStats() ([]readers.DeveloperStat, error) { return nil, nil }
 func (n *NoDataReader) GetLanguageStats() ([]readers.LanguageStat, error) { return nil, nil }
+func (n *NoDataReader) GetDeveloperTimeSeriesData() (*readers.DeveloperTimeSeriesData, error) { return nil, nil }
 
 func TestSentimentWithNoData(t *testing.T) {
 	// Create a mock reader with no data

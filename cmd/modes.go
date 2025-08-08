@@ -32,6 +32,7 @@ var modeHandlers = map[string]func(reader readers.Reader, output string, startTi
 	"devs-parallel":     devsParallel,
 	"run-times":         runTimes,
 	"sentiment":         sentiment,
+	"all":               runAllModes,
 }
 
 func executeModes(modes []string, reader readers.Reader, output string, startTime, endTime *time.Time) {
@@ -210,6 +211,45 @@ func runTimes(reader readers.Reader, output string, startTime, endTime *time.Tim
 
 func sentiment(reader readers.Reader, output string, startTime, endTime *time.Time) error {
 	return modes.Sentiment(reader, output)
+}
+
+func runAllModes(reader readers.Reader, output string, startTime, endTime *time.Time) error {
+	// 'all' mode runs the most commonly used analysis modes
+	// This matches the Python labours behavior for the 'all' meta-mode
+	allModes := []func(readers.Reader, string, *time.Time, *time.Time) error{
+		burndownProject,
+		devs,
+		ownershipBurndown,
+		couplesFiles,
+		devsEfforts,
+		languages,
+	}
+	
+	modeNames := []string{
+		"burndown-project",
+		"devs", 
+		"ownership",
+		"couples-files",
+		"devs-efforts",
+		"languages",
+	}
+	
+	if !viper.GetBool("quiet") {
+		fmt.Printf("Running 'all' mode: executing %d analysis modes\n", len(allModes))
+	}
+	
+	for i, modeFunc := range allModes {
+		if !viper.GetBool("quiet") {
+			fmt.Printf("  Running %s...\n", modeNames[i])
+		}
+		
+		if err := modeFunc(reader, output, startTime, endTime); err != nil {
+			fmt.Printf("  Error in mode %s: %v\n", modeNames[i], err)
+			// Continue with other modes even if one fails
+		}
+	}
+	
+	return nil
 }
 
 // extractModeDataForJSON extracts raw data from the reader for JSON output

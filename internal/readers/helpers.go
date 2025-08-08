@@ -79,3 +79,28 @@ func createReader(format string) (Reader, error) {
 		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
 }
+
+// transposeMatrix transposes a 2D integer matrix (swaps rows and columns)
+func transposeMatrix(matrix [][]int) [][]int {
+	if len(matrix) == 0 || len(matrix[0]) == 0 {
+		return [][]int{}
+	}
+	
+	rows := len(matrix)
+	cols := len(matrix[0])
+	
+	// Create transposed matrix
+	transposed := make([][]int, cols)
+	for i := range transposed {
+		transposed[i] = make([]int, rows)
+	}
+	
+	// Fill transposed matrix
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			transposed[j][i] = matrix[i][j]
+		}
+	}
+	
+	return transposed
+}

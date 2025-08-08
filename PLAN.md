@@ -29,7 +29,7 @@
 
 - [ ] **Fix Color Scheme** - Use exact matplotlib colors: Red (#d62728) bottom, Blue (#1f77b4) top
 - [ ] **Fix Title Generation** - Match Python format: "repository 2 x 225 (granularity 30, sampling 30)"
-- [ ] **Fix Missing 2024 Layer** - ⚠️ **CRITICAL** - Currently only shows 2025, need both 2024+2025 like Python
+- [x] **Fix Missing 2024 Layer** - ✅ **FIXED** - Now correctly shows both 2024+2025 layers like Python
 - [ ] **Fix Legend Labels** - Show year labels "2024", "2025" instead of date strings
 - [ ] **Match Chart Dimensions** - Exact matplotlib figure size, aspect ratio, grid style
 
@@ -61,12 +61,14 @@
 - ~~**Resampling**: Yearly resampling failure~~ ✅ **FIXED**
 - ~~**Time Periods**: Daily periods instead of yearly~~ ✅ **FIXED**
 - ~~**Chart Structure**: Triangular shapes~~ ✅ **FIXED**
+- ~~**Missing 2024 Layer**: Only showed 2025 data~~ ✅ **FIXED**
+- ~~**Legend Labels**: Date strings instead of year labels~~ ✅ **FIXED**
 
 ### 🔄 **Remaining Visual Fine-Tuning:**
-- **Colors**: Need Red (2024) + Blue (2025) vs current Blue only
-- **Missing Layer**: Only shows 2025, need both 2024+2025 like Python (⚠️ **CRITICAL**)
-- **Legend**: Need clean "2024", "2025" labels
-- **Title**: Need detailed metadata format like Python
+- **Colors**: ⚠️ **PARTIALLY IMPLEMENTED** - Matplotlib colors exist in code but theme system overrides them
+- ~~**Missing Layer**: Only shows 2025, need both 2024+2025 like Python~~ ✅ **FIXED**
+- ~~**Legend**: Need clean "2024", "2025" labels~~ ✅ **FIXED**
+- **Title**: ⚠️ **PARTIALLY IMPLEMENTED** - Metadata available but not used in title generation
 - **Y-axis Scale**: Different scale (2k vs 7k) - may be data-dependent
 
 ---

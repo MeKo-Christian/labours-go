@@ -10,42 +10,65 @@ import (
 )
 
 func TestProtobufReader_Read(t *testing.T) {
-	// Create sample protobuf data for testing
-	testResults := &pb.AnalysisResults{
-		Burndown: &pb.BurndownAnalysisResults{
-			Project: &pb.CompressedSparseRowMatrix{
-				NumberOfRows:    2,
-				NumberOfColumns: 3,
-				Data:            []int64{100, 90, 80, 120, 100, 85},
-				Indices:         []int32{0, 1, 2, 0, 1, 2},
-				Indptr:          []int64{0, 3, 6},
+	// Create burndown analysis data
+	burndownData := &pb.BurndownAnalysisResults{
+		Project: &pb.BurndownSparseMatrix{
+			Name:            "test-project",
+			NumberOfRows:    2,
+			NumberOfColumns: 3,
+			Rows: []*pb.BurndownSparseMatrixRow{
+				{Columns: []uint32{100, 90, 80}},
+				{Columns: []uint32{120, 100, 85}},
 			},
-			Files: &pb.CompressedSparseRowMatrix{
+		},
+		Files: []*pb.BurndownSparseMatrix{
+			{
+				Name:            "main.go",
 				NumberOfRows:    1,
 				NumberOfColumns: 3,
-				Data:            []int64{50, 45, 40},
-				Indices:         []int32{0, 1, 2},
-				Indptr:          []int64{0, 3},
-			},
-			People: &pb.CompressedSparseRowMatrix{
-				NumberOfRows:    2,
-				NumberOfColumns: 3,
-				Data:            []int64{80, 70, 60, 40, 30, 20},
-				Indices:         []int32{0, 1, 2, 0, 1, 2},
-				Indptr:          []int64{0, 3, 6},
-			},
-			FilesOwnership: &pb.FilesOwnership{
-				Value: map[string]int32{
-					"main.go":  0,
-					"utils.go": 1,
+				Rows: []*pb.BurndownSparseMatrixRow{
+					{Columns: []uint32{50, 45, 40}},
 				},
 			},
-			TickSize: 86400, // 1 day in seconds
 		},
-		Metadata: &pb.Metadata{
+		People: []*pb.BurndownSparseMatrix{
+			{
+				Name:            "developer1",
+				NumberOfRows:    2,
+				NumberOfColumns: 3,
+				Rows: []*pb.BurndownSparseMatrixRow{
+					{Columns: []uint32{80, 70, 60}},
+					{Columns: []uint32{40, 30, 20}},
+				},
+			},
+		},
+		FilesOwnership: []*pb.FilesOwnership{
+			{
+				Value: map[int32]int32{
+					0: 0, // file index -> owner index
+					1: 1,
+				},
+			},
+		},
+		Granularity: 1,
+		Sampling:    86400, // 1 day in seconds
+	}
+
+	// Marshal burndown data to bytes
+	burndownBytes, err := proto.Marshal(burndownData)
+	if err != nil {
+		t.Fatalf("Failed to marshal burndown data: %v", err)
+	}
+
+	// Create sample protobuf data using correct structure
+	testResults := &pb.AnalysisResults{
+		Header: &pb.Metadata{
 			Repository:    "test-repo",
 			BeginUnixTime: 1640995200, // 2022-01-01
 			EndUnixTime:   1672531200, // 2023-01-01
+		},
+		Contents: map[string][]byte{
+			"Burndown": burndownBytes,
 		},
 	}
 
@@ -80,17 +103,22 @@ func TestProtobufReader_GetProjectBurndown(t *testing.T) {
 		t.Error("Expected non-empty project name")
 	}
 
-	if len(matrix) != 2 {
-		t.Errorf("Expected 2 rows in matrix, got %d", len(matrix))
+	if len(matrix) != 3 {
+		t.Errorf("Expected 3 rows in matrix (after transpose), got %d", len(matrix))
 	}
 
-	if len(matrix[0]) != 3 {
-		t.Errorf("Expected 3 columns in first row, got %d", len(matrix[0]))
+	if len(matrix[0]) != 2 {
+		t.Errorf("Expected 2 columns in first row (after transpose), got %d", len(matrix[0]))
 	}
 
-	// Check specific values
+	// Check specific values (after transpose)
 	if matrix[0][0] != 100 {
 		t.Errorf("Expected first value to be 100, got %d", matrix[0][0])
+	}
+	
+	// Check that transposition worked correctly
+	if matrix[0][1] != 120 {
+		t.Errorf("Expected matrix[0][1] to be 120 (from original row 1, col 0), got %d", matrix[0][1])
 	}
 }
 
@@ -163,41 +191,64 @@ func TestProtobufReader_InvalidData(t *testing.T) {
 // Helper functions for testing
 
 func createTestProtobufReader(t *testing.T) *ProtobufReader {
-	testResults := &pb.AnalysisResults{
-		Burndown: &pb.BurndownAnalysisResults{
-			Project: &pb.CompressedSparseRowMatrix{
-				NumberOfRows:    2,
-				NumberOfColumns: 3,
-				Data:            []int64{100, 90, 80, 120, 100, 85},
-				Indices:         []int32{0, 1, 2, 0, 1, 2},
-				Indptr:          []int64{0, 3, 6},
+	// Create burndown analysis data
+	burndownData := &pb.BurndownAnalysisResults{
+		Project: &pb.BurndownSparseMatrix{
+			Name:            "test-project",
+			NumberOfRows:    2,
+			NumberOfColumns: 3,
+			Rows: []*pb.BurndownSparseMatrixRow{
+				{Columns: []uint32{100, 90, 80}},
+				{Columns: []uint32{120, 100, 85}},
 			},
-			Files: &pb.CompressedSparseRowMatrix{
+		},
+		Files: []*pb.BurndownSparseMatrix{
+			{
+				Name:            "main.go",
 				NumberOfRows:    1,
 				NumberOfColumns: 3,
-				Data:            []int64{50, 45, 40},
-				Indices:         []int32{0, 1, 2},
-				Indptr:          []int64{0, 3},
-			},
-			People: &pb.CompressedSparseRowMatrix{
-				NumberOfRows:    2,
-				NumberOfColumns: 3,
-				Data:            []int64{80, 70, 60, 40, 30, 20},
-				Indices:         []int32{0, 1, 2, 0, 1, 2},
-				Indptr:          []int64{0, 3, 6},
-			},
-			FilesOwnership: &pb.FilesOwnership{
-				Value: map[string]int32{
-					"main.go":  0,
-					"utils.go": 1,
+				Rows: []*pb.BurndownSparseMatrixRow{
+					{Columns: []uint32{50, 45, 40}},
 				},
 			},
-			TickSize: 86400,
 		},
-		Metadata: &pb.Metadata{
+		People: []*pb.BurndownSparseMatrix{
+			{
+				Name:            "developer1",
+				NumberOfRows:    2,
+				NumberOfColumns: 3,
+				Rows: []*pb.BurndownSparseMatrixRow{
+					{Columns: []uint32{80, 70, 60}},
+					{Columns: []uint32{40, 30, 20}},
+				},
+			},
+		},
+		FilesOwnership: []*pb.FilesOwnership{
+			{
+				Value: map[int32]int32{
+					0: 0, // file index -> owner index
+					1: 1,
+				},
+			},
+		},
+		Granularity: 1,
+		Sampling:    86400,
+	}
+
+	// Marshal burndown data to bytes
+	burndownBytes, err := proto.Marshal(burndownData)
+	if err != nil {
+		t.Fatalf("Failed to marshal burndown data: %v", err)
+	}
+
+	testResults := &pb.AnalysisResults{
+		Header: &pb.Metadata{
 			Repository:    "test-repo",
 			BeginUnixTime: 1640995200,
 			EndUnixTime:   1672531200,
+		},
+		Contents: map[string][]byte{
+			"Burndown": burndownBytes,
 		},
 	}
 

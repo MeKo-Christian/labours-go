@@ -59,7 +59,7 @@ func (r *YamlReader) GetProjectBurndown() (string, [][]int) {
 	}
 	repo := r.GetName()
 	matrix := parseBurndownMatrix(burndownData["project"].(string))
-	return repo, matrix
+	return repo, transposeMatrix(matrix)
 }
 
 func (r *YamlReader) GetFilesBurndown() ([]FileBurndown, error) {
@@ -77,7 +77,7 @@ func (r *YamlReader) GetFilesBurndown() ([]FileBurndown, error) {
 		matrix := parseBurndownMatrix(matrixData.(string))
 		fileBurndowns = append(fileBurndowns, FileBurndown{
 			Filename: filename,
-			Matrix:   matrix,
+			Matrix:   transposeMatrix(matrix),
 		})
 	}
 	return fileBurndowns, nil
@@ -98,7 +98,7 @@ func (r *YamlReader) GetPeopleBurndown() ([]PeopleBurndown, error) {
 		matrix := parseBurndownMatrix(matrixData.(string))
 		peopleBurndowns = append(peopleBurndowns, PeopleBurndown{
 			Person: person,
-			Matrix: matrix,
+			Matrix: transposeMatrix(matrix),
 		})
 	}
 	return peopleBurndowns, nil
@@ -151,6 +151,38 @@ func (r *YamlReader) GetFileCooccurrence() ([]string, [][]int, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("missing Couples data in YAML")
 	}
+	
+	// Try Python-style nested structure first: files_coocc["index"] and files_coocc["matrix"]
+	if filesCoocc, exists := couplesData["files_coocc"].(map[string]interface{}); exists {
+		fileIndex, indexOk := filesCoocc["index"].([]string)
+		if !indexOk {
+			// Try []interface{} and convert to []string
+			if indexIntf, ok := filesCoocc["index"].([]interface{}); ok {
+				fileIndex = make([]string, len(indexIntf))
+				for i, v := range indexIntf {
+					if str, ok := v.(string); ok {
+						fileIndex[i] = str
+					}
+				}
+				indexOk = true
+			}
+		}
+		
+		if indexOk {
+			// Handle both string matrix and map-based sparse matrix format
+			if matrixStr, ok := filesCoocc["matrix"].(string); ok {
+				// Dense matrix as string
+				matrix := parseBurndownMatrix(matrixStr)
+				return fileIndex, matrix, nil
+			} else if matrixData, ok := filesCoocc["matrix"].([]interface{}); ok {
+				// Sparse matrix as array of maps (Python format)
+				matrix := parseCoooccurrenceMatrix(matrixData)
+				return fileIndex, matrix, nil
+			}
+		}
+	}
+	
+	// Fallback to flat structure (original Go format)
 	fileIndex, ok := couplesData["file_couples_index"].([]string)
 	if !ok {
 		return nil, nil, fmt.Errorf("missing file_couples_index in Couples")
@@ -169,6 +201,38 @@ func (r *YamlReader) GetPeopleCooccurrence() ([]string, [][]int, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("missing Couples data in YAML")
 	}
+	
+	// Try Python-style nested structure first: people_coocc["index"] and people_coocc["matrix"]
+	if peopleCoocc, exists := couplesData["people_coocc"].(map[string]interface{}); exists {
+		peopleIndex, indexOk := peopleCoocc["index"].([]string)
+		if !indexOk {
+			// Try []interface{} and convert to []string
+			if indexIntf, ok := peopleCoocc["index"].([]interface{}); ok {
+				peopleIndex = make([]string, len(indexIntf))
+				for i, v := range indexIntf {
+					if str, ok := v.(string); ok {
+						peopleIndex[i] = str
+					}
+				}
+				indexOk = true
+			}
+		}
+		
+		if indexOk {
+			// Handle both string matrix and map-based sparse matrix format
+			if matrixStr, ok := peopleCoocc["matrix"].(string); ok {
+				// Dense matrix as string
+				matrix := parseBurndownMatrix(matrixStr)
+				return peopleIndex, matrix, nil
+			} else if matrixData, ok := peopleCoocc["matrix"].([]interface{}); ok {
+				// Sparse matrix as array of maps (Python format)
+				matrix := parseCoooccurrenceMatrix(matrixData)
+				return peopleIndex, matrix, nil
+			}
+		}
+	}
+	
+	// Fallback to flat structure (original Go format)
 	peopleIndex, ok := couplesData["people_couples_index"].([]string)
 	if !ok {
 		return nil, nil, fmt.Errorf("missing people_couples_index in Couples")
@@ -183,23 +247,57 @@ func (r *YamlReader) GetPeopleCooccurrence() ([]string, [][]int, error) {
 }
 
 func (r *YamlReader) GetShotnessCooccurrence() ([]string, [][]int, error) {
-	shotnessData, ok := r.data["Shotness"].([]map[string]interface{})
-	if !ok {
-		return nil, nil, fmt.Errorf("missing Shotness data in YAML")
+	shotnessRecords, err := r.GetShotnessRecords()
+	if err != nil {
+		return nil, nil, err
 	}
 
-	var names []string
-	var matrix [][]int
-	for _, record := range shotnessData {
-		name := fmt.Sprintf("%s:%s:%s", record["type"], record["name"], record["file"])
-		names = append(names, name)
-		row := make([]int, len(record["counters"].(map[string]int)))
-		for _, value := range record["counters"].(map[string]int) {
-			row = append(row, value)
-		}
-		matrix = append(matrix, row)
+	// Create index using Python format: "file:name" 
+	var index []string
+	for _, record := range shotnessRecords {
+		name := fmt.Sprintf("%s:%s", record.File, record.Name)
+		index = append(index, name)
 	}
-	return names, matrix, nil
+
+	// Build sparse co-occurrence matrix from counters
+	size := len(shotnessRecords)
+	matrix := make([][]int, size)
+	for i := range matrix {
+		matrix[i] = make([]int, size)
+	}
+
+	// Fill matrix based on counter overlap/similarity
+	for i, recordI := range shotnessRecords {
+		for j, recordJ := range shotnessRecords {
+			if i == j {
+				// Diagonal: sum of all counters for this record
+				var total int32
+				for _, count := range recordI.Counters {
+					total += count
+				}
+				matrix[i][j] = int(total)
+			} else {
+				// Off-diagonal: count of overlapping time periods
+				var overlap int32
+				for timeI, countI := range recordI.Counters {
+					if countJ, exists := recordJ.Counters[timeI]; exists && countI > 0 && countJ > 0 {
+						overlap += min32(countI, countJ)
+					}
+				}
+				matrix[i][j] = int(overlap)
+			}
+		}
+	}
+
+	return index, matrix, nil
+}
+
+// min32 returns the minimum of two int32 values
+func min32(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func (r *YamlReader) GetShotnessRecords() ([]ShotnessRecord, error) {
@@ -271,64 +369,161 @@ func (r *YamlReader) GetShotnessRecords() ([]ShotnessRecord, error) {
 }
 
 func (r *YamlReader) GetDeveloperStats() ([]DeveloperStat, error) {
+	// This method is deprecated in favor of GetDeveloperTimeSeriesData for Python compatibility
+	devData, err := r.GetDeveloperTimeSeriesData()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert time series data to flat stats (aggregated)
+	developerMap := make(map[string]*DeveloperStat)
+	
+	for _, dayStats := range devData.Days {
+		for devIdx, stats := range dayStats {
+			if devIdx < len(devData.People) {
+				devName := devData.People[devIdx]
+				if existing, exists := developerMap[devName]; exists {
+					existing.Commits += stats.Commits
+					existing.LinesAdded += stats.LinesAdded
+					existing.LinesRemoved += stats.LinesRemoved
+					existing.LinesModified += stats.LinesModified
+				} else {
+					developerMap[devName] = &DeveloperStat{
+						Name:          devName,
+						Commits:       stats.Commits,
+						LinesAdded:    stats.LinesAdded,
+						LinesRemoved:  stats.LinesRemoved,
+						LinesModified: stats.LinesModified,
+					}
+				}
+			}
+		}
+	}
+	
+	var result []DeveloperStat
+	for _, stats := range developerMap {
+		result = append(result, *stats)
+	}
+	
+	return result, nil
+}
+
+// GetDeveloperTimeSeriesData returns Python-compatible time series data: (people, days)
+// where days is {day: {dev: DevDay}}
+func (r *YamlReader) GetDeveloperTimeSeriesData() (*DeveloperTimeSeriesData, error) {
 	devsData, ok := r.data["Devs"].(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("missing Devs data in YAML")
 	}
-	devIndex, ok := devsData["dev_index"].([]string)
-	if !ok {
-		return nil, fmt.Errorf("missing dev_index in Devs")
+	
+	// Get people list (dev names)
+	var people []string
+	if peopleData, ok := devsData["people"].([]interface{}); ok {
+		for _, p := range peopleData {
+			if str, ok := p.(string); ok {
+				people = append(people, str)
+			}
+		}
+	} else if devIndex, ok := devsData["dev_index"].([]interface{}); ok {
+		for _, p := range devIndex {
+			if str, ok := p.(string); ok {
+				people = append(people, str)
+			}
+		}
+	} else {
+		return nil, fmt.Errorf("missing people/dev_index in Devs")
 	}
-	ticks, ok := devsData["ticks"].(map[string]interface{})
+	
+	// Get ticks (time series data)
+	ticks, ok := devsData["ticks"].(map[interface{}]interface{})
 	if !ok {
 		return nil, fmt.Errorf("missing ticks in Devs")
 	}
-
-	var devStats []DeveloperStat
-	for _, tick := range ticks {
-		// Assert the tick as a map
-		tickMap, ok := tick.(map[string]interface{})
+	
+	days := make(map[int]map[int]DevDay)
+	
+	for dayKey, dayData := range ticks {
+		dayInt, ok := convertToInt(dayKey)
 		if !ok {
-			return nil, fmt.Errorf("invalid tick format")
+			continue
 		}
-
-		// Get the "devs" map from the tick
-		devs, ok := tickMap["devs"].(map[string]interface{})
+		
+		dayMap, ok := dayData.(map[interface{}]interface{})
 		if !ok {
-			return nil, fmt.Errorf("missing 'devs' in tick")
+			continue
 		}
-
-		// Iterate over devs map
-		for id, stats := range devs {
-			// Cast stats to a map
-			statsMap, ok := stats.(map[string]interface{})
+		
+		devs, ok := dayMap["devs"].(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+		
+		dayDevs := make(map[int]DevDay)
+		
+		for devKey, devData := range devs {
+			devInt, ok := convertToInt(devKey)
 			if !ok {
-				return nil, fmt.Errorf("invalid stats format for developer %s", id)
+				continue
 			}
-
-			// Parse developer stats
-			commits, _ := statsMap["commits"].(int)       // Safely cast commits
-			linesAdded, _ := statsMap["added"].(int)      // Safely cast linesAdded
-			linesRemoved, _ := statsMap["removed"].(int)  // Safely cast linesRemoved
-			linesModified, _ := statsMap["changed"].(int) // Safely cast linesModified
-
-			index, err := strconv.Atoi(id)
-			if err != nil {
-				return nil, fmt.Errorf("invalid developer index: %v", err)
+			
+			devMap, ok := devData.(map[interface{}]interface{})
+			if !ok {
+				continue
 			}
-
-			// Append developer stats
-			devStats = append(devStats, DeveloperStat{
-				Name:          devIndex[index],
+			
+			// Parse DevDay data
+			var commits, added, removed, changed int
+			var languages map[string][]int
+			
+			if c, ok := convertToInt(devMap["commits"]); ok {
+				commits = c
+			}
+			if a, ok := convertToInt(devMap["added"]); ok {
+				added = a
+			}
+			if r, ok := convertToInt(devMap["removed"]); ok {
+				removed = r
+			}
+			if c, ok := convertToInt(devMap["changed"]); ok {
+				changed = c
+			}
+			
+			// Parse languages if present
+			if langData, ok := devMap["languages"].(map[interface{}]interface{}); ok {
+				languages = make(map[string][]int)
+				for langKey, langStats := range langData {
+					if langStr, ok := langKey.(string); ok {
+						if langList, ok := langStats.([]interface{}); ok && len(langList) >= 3 {
+							var langStats []int
+							for _, stat := range langList {
+								if statInt, ok := convertToInt(stat); ok {
+									langStats = append(langStats, statInt)
+								}
+							}
+							if len(langStats) >= 3 {
+								languages[langStr] = langStats
+							}
+						}
+					}
+				}
+			}
+			
+			dayDevs[devInt] = DevDay{
 				Commits:       commits,
-				LinesAdded:    linesAdded,
-				LinesRemoved:  linesRemoved,
-				LinesModified: linesModified,
-			})
+				LinesAdded:    added,
+				LinesRemoved:  removed,
+				LinesModified: changed,
+				Languages:     languages,
+			}
 		}
+		
+		days[dayInt] = dayDevs
 	}
-
-	return devStats, nil
+	
+	return &DeveloperTimeSeriesData{
+		People: people,
+		Days:   days,
+	}, nil
 }
 
 func (r *YamlReader) GetLanguageStats() ([]LanguageStat, error) {
@@ -346,21 +541,85 @@ func parseBurndownMatrix(data string) [][]int {
 	lines := strings.Split(data, "\n")
 	var matrix [][]int
 	for _, line := range lines {
-		if line == "" {
+		if strings.TrimSpace(line) == "" {
 			continue
 		}
 		numbers := strings.Fields(line)
 		var row []int
 		for _, num := range numbers {
-			val, err := strconv.Atoi(num)
+			val, err := strconv.Atoi(strings.TrimSpace(num))
 			if err != nil {
 				continue
 			}
 			row = append(row, val)
 		}
-		matrix = append(matrix, row)
+		if len(row) > 0 {
+			matrix = append(matrix, row)
+		}
 	}
 	return matrix
+}
+
+// parseCoooccurrenceMatrix converts Python's sparse matrix format to dense matrix
+// Python format: array of maps where each map represents non-zero values in that row
+func parseCoooccurrenceMatrix(data []interface{}) [][]int {
+	if len(data) == 0 {
+		return [][]int{}
+	}
+	
+	// Find maximum column index to determine matrix size
+	maxCol := 0
+	for _, rowData := range data {
+		if rowMap, ok := rowData.(map[interface{}]interface{}); ok {
+			for colKey := range rowMap {
+				if colInt, ok := convertToInt(colKey); ok && colInt > maxCol {
+					maxCol = colInt
+				}
+			}
+		}
+	}
+	
+	// Create dense matrix
+	matrix := make([][]int, len(data))
+	for i := range matrix {
+		matrix[i] = make([]int, maxCol+1)
+	}
+	
+	// Fill in non-zero values
+	for rowIdx, rowData := range data {
+		if rowMap, ok := rowData.(map[interface{}]interface{}); ok {
+			for colKey, valKey := range rowMap {
+				if colInt, ok := convertToInt(colKey); ok {
+					if valInt, ok := convertToInt(valKey); ok {
+						if colInt < len(matrix[rowIdx]) {
+							matrix[rowIdx][colInt] = valInt
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return matrix
+}
+
+// convertToInt safely converts various number types to int
+func convertToInt(val interface{}) (int, bool) {
+	switch v := val.(type) {
+	case int:
+		return v, true
+	case int32:
+		return int(v), true
+	case int64:
+		return int(v), true
+	case float64:
+		return int(v), true
+	case string:
+		if i, err := strconv.Atoi(v); err == nil {
+			return i, true
+		}
+	}
+	return 0, false
 }
 
 // GetBurndownParameters retrieves burndown parameters for YAML reader
