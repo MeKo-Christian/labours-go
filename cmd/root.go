@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"labours-go/internal/graphics"
 
@@ -35,7 +36,6 @@ func initializeFlags() {
 	rootCmd.PersistentFlags().String("style", "ggplot", "Plot style to use")
 	rootCmd.PersistentFlags().String("backend", "", "Matplotlib backend to use")
 	rootCmd.PersistentFlags().String("background", "white", "Plot's general color scheme")
-	rootCmd.PersistentFlags().String("size", "", "Axes' size in inches, e.g., '12,9'")
 	rootCmd.PersistentFlags().Bool("relative", false, "Occupy 100% height for every measurement")
 	rootCmd.PersistentFlags().String("tmpdir", "/tmp", "Temporary directory for intermediate files")
 	rootCmd.PersistentFlags().StringSliceP("modes", "m", []string{}, "Modes to run (can be repeated)")
@@ -49,7 +49,10 @@ func initializeFlags() {
 }
 
 func bindFlagsToViper() {
-	viper.BindPFlags(rootCmd.PersistentFlags())
+	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
+		fmt.Printf("Error binding flags: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func initConfig() {
@@ -90,8 +93,21 @@ func runLaboursCommand(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Set the selected theme
+	// Set the selected theme, with style-to-theme mapping
 	themeName := viper.GetString("theme")
+	styleName := viper.GetString("style")
+
+	// Map matplotlib styles to themes for compatibility
+	if styleName != "ggplot" && styleName != "" {
+		mappedTheme := mapStyleToTheme(styleName)
+		if mappedTheme != "" {
+			themeName = mappedTheme
+			if !viper.GetBool("quiet") {
+				fmt.Printf("Mapping matplotlib style '%s' to theme '%s'\n", styleName, mappedTheme)
+			}
+		}
+	}
+
 	if err := graphics.SetTheme(themeName); err != nil {
 		fmt.Printf("Failed to set theme '%s': %v\n", themeName, err)
 		fmt.Printf("Available themes: %v\n", graphics.ListThemes())
@@ -183,4 +199,30 @@ func handleHerculesIntegration(repoPath string) {
 			fmt.Printf("Error running analysis '%s': %v\n", analysis, err)
 		}
 	}
+}
+
+// mapStyleToTheme maps matplotlib style names to labours-go theme names
+func mapStyleToTheme(style string) string {
+	styleToTheme := map[string]string{
+		// Matplotlib built-in styles to theme mapping
+		"ggplot":               "default", // ggplot is our default
+		"seaborn":              "minimal", // seaborn-like -> minimal
+		"seaborn-v0_8":         "minimal", // newer seaborn -> minimal
+		"classic":              "default", // classic matplotlib -> default
+		"dark_background":      "dark",    // dark background -> dark theme
+		"bmh":                  "vibrant", // Bayesian Methods for Hackers -> vibrant
+		"fivethirtyeight":      "vibrant", // FiveThirtyEight -> vibrant
+		"grayscale":            "minimal", // grayscale -> minimal
+		"tableau-colorblind10": "default", // tableau -> default
+
+		// Common style variants
+		"dark":       "dark",
+		"light":      "default",
+		"minimal":    "minimal",
+		"vibrant":    "vibrant",
+		"colorful":   "vibrant",
+		"monochrome": "minimal",
+	}
+
+	return styleToTheme[strings.ToLower(style)]
 }

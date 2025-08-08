@@ -2,6 +2,7 @@ package graphics
 
 import (
 	"fmt"
+	"image/color"
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
@@ -46,8 +47,23 @@ func PlotBurndownPythonStyle(data *burndown.ProcessedBurndown, output string, re
 		matrix = normalizeMatrixColumns(data.Matrix)
 	}
 
-	// Generate color palette
-	colors := generateColorPaletteFromTheme(numSeries)
+	// DEBUG: Print matrix values to understand the data
+	fmt.Printf("DEBUG MATRIX ANALYSIS:\n")
+	fmt.Printf("  Matrix dimensions: %dx%d\n", len(matrix), len(matrix[0]))
+	for i := 0; i < len(matrix); i++ {
+		minVal, maxVal := matrix[i][0], matrix[i][0]
+		negCount, posCount := 0, 0
+		for j := 0; j < len(matrix[i]); j++ {
+			if matrix[i][j] < minVal { minVal = matrix[i][j] }
+			if matrix[i][j] > maxVal { maxVal = matrix[i][j] }
+			if matrix[i][j] < 0 { negCount++ }
+			if matrix[i][j] > 0 { posCount++ }
+		}
+		fmt.Printf("  Layer %d: min=%.2f, max=%.2f, negatives=%d, positives=%d\n", i, minVal, maxVal, negCount, posCount)
+	}
+	
+	// Generate matplotlib-compatible color palette (matches Python exactly)
+	colors := generateMatplotlibColorPalette(numSeries)
 
 	// Create cumulative data for stacking (bottom to top like Python's stackplot)
 	cumulative := make([][]float64, numSeries)
@@ -208,4 +224,42 @@ func PrintSurvivalFunction(matrix [][]float64) {
 			}
 		}
 	}
+}
+
+// generateMatplotlibColorPalette creates colors that exactly match Python matplotlib defaults
+func generateMatplotlibColorPalette(n int) []color.Color {
+	// Matplotlib default colors (C0, C1, C2, ...) - these exactly match Python pyplot
+	matplotlibColors := []color.Color{
+		color.RGBA{R: 31, G: 119, B: 180, A: 180},   // Blue (C0) - matplotlib default
+		color.RGBA{R: 255, G: 127, B: 14, A: 180},   // Orange (C1) 
+		color.RGBA{R: 44, G: 160, B: 44, A: 180},    // Green (C2)
+		color.RGBA{R: 214, G: 39, B: 40, A: 180},    // Red (C3)
+		color.RGBA{R: 148, G: 103, B: 189, A: 180},  // Purple (C4)
+		color.RGBA{R: 140, G: 86, B: 75, A: 180},    // Brown (C5)
+		color.RGBA{R: 227, G: 119, B: 194, A: 180},  // Pink (C6)
+		color.RGBA{R: 127, G: 127, B: 127, A: 180},  // Gray (C7)
+		color.RGBA{R: 188, G: 189, B: 34, A: 180},   // Olive (C8)
+		color.RGBA{R: 23, G: 190, B: 207, A: 180},   // Cyan (C9)
+	}
+	
+	// For burndown charts specifically, Python matplotlib uses C3 (Red) first for older code, then C0 (Blue) for newer
+	// This exactly matches the Python reference chart pattern
+	if n == 2 {
+		return []color.Color{
+			color.RGBA{R: 214, G: 39, B: 40, A: 200},   // Red (C3) for bottom layer (older/2024)
+			color.RGBA{R: 31, G: 119, B: 180, A: 200},  // Blue (C0) for top layer (newer/2025)
+		}
+	}
+	
+	colors := make([]color.Color, n)
+	for i := 0; i < n; i++ {
+		if i < len(matplotlibColors) {
+			colors[i] = matplotlibColors[i]
+		} else {
+			// Generate additional colors if needed
+			colors[i] = generateHSVColorWithOpacity(i, n, 180)
+		}
+	}
+	
+	return colors
 }

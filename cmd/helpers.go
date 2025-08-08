@@ -73,14 +73,37 @@ func detectAndReadInput(input, inputFormat string) readers.Reader {
 func resolveModes() []string {
 	modes := viper.GetStringSlice("modes")
 	if len(modes) == 0 {
-		fmt.Println("No modes specified. Use --modes to specify what to run.")
+		// Default behavior: if no modes specified, show available modes like Python
+		fmt.Println("No modes specified. Available modes:")
+		fmt.Println("  burndown (alias for burndown-project), burndown-project, burndown-file, burndown-person")
+		fmt.Println("  ownership, overwrites-matrix")  
+		fmt.Println("  couples-files, couples-people, couples-shotness")
+		fmt.Println("  devs, devs-efforts, shotness")
+		fmt.Println("  old-vs-new, languages, devs-parallel")
+		fmt.Println("  run-times, sentiment")
+		fmt.Println("  all (runs default set of analyses)")
+		fmt.Println("Use --modes to specify what to run.")
 		os.Exit(1)
 	}
 
+	// Handle mode aliases for Python compatibility
+	var resolvedModes []string
+	for _, mode := range modes {
+		switch mode {
+		case "burndown":
+			// Python compatibility: burndown defaults to burndown-project
+			resolvedModes = append(resolvedModes, "burndown-project")
+		default:
+			resolvedModes = append(resolvedModes, mode)
+		}
+	}
+	modes = resolvedModes
+
 	if contains(modes, "all") {
+		// Match Python's "all" mode composition exactly
 		modes = []string{
 			"burndown-project", "overwrites-matrix", "ownership",
-			"couples-files", "couples-people", "couples-shotness",
+			"couples-files", "couples-people", "couples-shotness", 
 			"shotness", "devs", "devs-efforts",
 		}
 	}

@@ -363,14 +363,42 @@ func parseBurndownMatrix(data string) [][]int {
 	return matrix
 }
 
-// GetBurndownParameters retrieves burndown parameters for YAML reader (stub implementation)
+// GetBurndownParameters retrieves burndown parameters for YAML reader
 func (r *YamlReader) GetBurndownParameters() (burndown.BurndownParameters, error) {
-	// YAML format doesn't typically contain these parameters explicitly
-	// Return reasonable defaults for compatibility
+	burndownData, ok := r.data["Burndown"].(map[string]interface{})
+	if !ok {
+		return burndown.BurndownParameters{}, fmt.Errorf("missing Burndown data in YAML")
+	}
+	
+	// Extract parameters from YAML - these ARE present in hercules YAML output
+	var sampling int = 1      // Default
+	var granularity int = 1   // Default  
+	var tickSize float64 = 86400 // Default (24 hours)
+	
+	if val, exists := burndownData["sampling"]; exists {
+		if intVal, ok := val.(int); ok {
+			sampling = intVal
+		}
+	}
+	
+	if val, exists := burndownData["granularity"]; exists {
+		if intVal, ok := val.(int); ok {
+			granularity = intVal
+		}
+	}
+	
+	if val, exists := burndownData["tick_size"]; exists {
+		if intVal, ok := val.(int); ok {
+			tickSize = float64(intVal)
+		} else if floatVal, ok := val.(float64); ok {
+			tickSize = floatVal
+		}
+	}
+	
 	return burndown.BurndownParameters{
-		Sampling:    1,     // Daily sampling
-		Granularity: 1,     // 1 day granularity  
-		TickSize:    86400, // 24 hours in seconds
+		Sampling:    sampling,
+		Granularity: granularity,
+		TickSize:    tickSize,
 	}, nil
 }
 

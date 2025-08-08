@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // BurndownParameters matches Python's burndown parameters structure
 type BurndownParameters struct {
 	Sampling    int     // Sampling interval
@@ -32,8 +40,8 @@ type ProcessedBurndown struct {
 	ResampleMode    string      // Resampling mode used
 }
 
-// InterpolateBurndownMatrix ports the Python interpolate_burndown_matrix function
-// This is the core algorithm that converts sparse age-band data into a daily matrix
+// InterpolateBurndownMatrix converts sparse age-band data into a daily matrix with proper code persistence
+// This implements burndown semantics: code persists until explicitly modified/deleted
 func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progress bool) ([][]float64, error) {
 	if len(matrix) == 0 || len(matrix[0]) == 0 {
 		return [][]float64{}, fmt.Errorf("empty matrix")
@@ -50,7 +58,10 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 		daily[i] = make([]float64, dailyCols)
 	}
 
-	// Port the complex Python interpolation algorithm
+	fmt.Printf("DEBUG INTERPOLATION: Converting %dx%d sparse matrix to %dx%d daily matrix\n", 
+		rows, cols, dailyRows, dailyCols)
+
+	// Restore the original complex Python interpolation algorithm that creates smooth curves
 	for y := 0; y < rows; y++ {
 		for x := 0; x < cols; x++ {
 			// Skip if the future is zeros: y * granularity > (x + 1) * sampling
@@ -58,12 +69,12 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 				continue
 			}
 
-			// Define nested decay function (matches Python)
+			// Define nested decay function (creates smooth exponential decay curves)
 			decay := func(startIndex int, startVal float64) {
 				if startVal == 0 {
 					return
 				}
-				k := float64(matrix[y][x]) / startVal // k <= 1
+				k := float64(matrix[y][x]) / startVal // k <= 1, creates decay rate
 				scale := float64((x+1)*sampling - startIndex)
 				
 				for i := y * granularity; i < (y+1)*granularity; i++ {
@@ -71,13 +82,15 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 					if startIndex > 0 {
 						initial = daily[i][startIndex-1]
 					}
+					// Create smooth exponential-like curves between points
 					for j := startIndex; j < (x+1)*sampling; j++ {
-						daily[i][j] = initial * (1 + (k-1)*float64(j-startIndex+1)/scale)
+						progress := float64(j-startIndex+1) / scale
+						daily[i][j] = initial * (1 + (k-1)*progress)
 					}
 				}
 			}
 
-			// Define nested grow function (matches Python)
+			// Define nested grow function (creates smooth growth curves)  
 			grow := func(finishIndex int, finishVal float64) {
 				var initial float64
 				if x > 0 {
@@ -90,14 +103,16 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 				if finishIndex == startIndex {
 					return
 				}
+				// Average slope creates smooth linear growth
 				avg := (finishVal - initial) / float64(finishIndex-startIndex)
 				
+				// Fill triangular region with smooth interpolation
 				for j := x * sampling; j < finishIndex; j++ {
 					for i := startIndex; i <= j; i++ {
 						daily[i][j] = avg
 					}
 				}
-				// Copy [x*g..y*s)
+				// Copy values to create smooth persistence
 				for j := x * sampling; j < finishIndex; j++ {
 					for i := y * granularity; i < x*sampling; i++ {
 						if j > 0 {
@@ -107,13 +122,14 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 				}
 			}
 
-			// Main interpolation logic (matches Python's complex conditional structure)
+			// Main interpolation logic with complex conditional structure for smooth curves
 			if (y+1)*granularity >= (x+1)*sampling {
-				// Case: x*granularity <= (y+1)*sampling
+				// Case: Current age band extends beyond current time sampling
 				if y*granularity <= x*sampling {
 					grow((x+1)*sampling, float64(matrix[y][x]))
 				} else if (x+1)*sampling > y*granularity {
 					grow((x+1)*sampling, float64(matrix[y][x]))
+					// Smooth fill for overlapping region
 					avg := float64(matrix[y][x]) / float64((x+1)*sampling-y*granularity)
 					for j := y * granularity; j < (x+1)*sampling; j++ {
 						for i := y * granularity; i <= j; i++ {
@@ -122,7 +138,7 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 					}
 				}
 			} else if (y+1)*granularity >= x*sampling {
-				// Complex peak calculation case
+				// Complex peak calculation case for smooth curves
 				var v1, v2 float64
 				if x > 0 {
 					v1 = float64(matrix[y][x-1])
@@ -145,6 +161,7 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 					}
 				}
 				
+				// Calculate peak with smooth interpolation
 				peak := v1 + (v1-previous)/scale*delta
 				if v2 > peak {
 					if x < cols-1 {
@@ -157,7 +174,7 @@ func InterpolateBurndownMatrix(matrix [][]int, granularity, sampling int, progre
 				grow((y+1)*granularity, peak)
 				decay((y+1)*granularity, peak)
 			} else {
-				// Case: (x+1)*granularity < y*sampling
+				// Case: Age band is completely in the past  
 				if x > 0 {
 					decay(x*sampling, float64(matrix[y][x-1]))
 				}
@@ -179,6 +196,20 @@ func FloorDateTime(dt time.Time, tickSize float64) time.Time {
 func LoadBurndown(header BurndownHeader, name string, matrix [][]int, resample string, reportSurvival bool, interpolationProgress bool) (*ProcessedBurndown, error) {
 	if header.Sampling <= 0 || header.Granularity <= 0 {
 		return nil, fmt.Errorf("invalid sampling (%d) or granularity (%d)", header.Sampling, header.Granularity)
+	}
+
+	// DEBUG: Check raw input matrix
+	fmt.Printf("DEBUG RAW INPUT MATRIX:\n")
+	fmt.Printf("  Dimensions: %dx%d\n", len(matrix), len(matrix[0]))
+	for i := 0; i < len(matrix); i++ {
+		minVal, maxVal := matrix[i][0], matrix[i][0]
+		nonZeroCount := 0
+		for j := 0; j < len(matrix[i]); j++ {
+			if matrix[i][j] < minVal { minVal = matrix[i][j] }
+			if matrix[i][j] > maxVal { maxVal = matrix[i][j] }
+			if matrix[i][j] != 0 { nonZeroCount++ }
+		}
+		fmt.Printf("  Row %d: min=%d, max=%d, non-zeros=%d\n", i, minVal, maxVal, nonZeroCount)
 	}
 
 	start := FloorDateTime(time.Unix(header.Start, 0), header.TickSize)
@@ -213,6 +244,23 @@ func LoadBurndown(header BurndownHeader, name string, matrix [][]int, resample s
 			for j := lastDays; j < len(daily[i]); j++ {
 				daily[i][j] = 0
 			}
+		}
+
+		// DEBUG: Analyze interpolated daily matrix before resampling
+		fmt.Printf("DEBUG DAILY MATRIX ANALYSIS:\n")
+		fmt.Printf("  Daily matrix dimensions: %dx%d\n", len(daily), len(daily[0]))
+		for i := 0; i < min(len(daily), 3); i++ { // Show first 3 rows
+			nonZeroCount := 0
+			negCount := 0
+			minVal, maxVal := daily[i][0], daily[i][0]
+			for j := 0; j < len(daily[i]); j++ {
+				if daily[i][j] != 0 { nonZeroCount++ }
+				if daily[i][j] < 0 { negCount++ }
+				if daily[i][j] < minVal { minVal = daily[i][j] }
+				if daily[i][j] > maxVal { maxVal = daily[i][j] }
+			}
+			fmt.Printf("  Daily row %d: range=[%.2f to %.2f], non-zeros=%d, negatives=%d\n", 
+				i, minVal, maxVal, nonZeroCount, negCount)
 		}
 
 		// Resample the bands - convert Python's pandas logic to Go
@@ -255,6 +303,54 @@ func LoadBurndown(header BurndownHeader, name string, matrix [][]int, resample s
 		resample = "M" // fake resampling type as Python does
 	}
 
+	// DEBUG: Analyze negative values without clamping to understand root cause
+	negativeCount := 0
+	minNegative := 0.0
+	maxNegative := 0.0
+	for i := range finalMatrix {
+		for j := range finalMatrix[i] {
+			if finalMatrix[i][j] < 0 {
+				negativeCount++
+				if finalMatrix[i][j] < minNegative {
+					minNegative = finalMatrix[i][j]
+				}
+				if finalMatrix[i][j] > maxNegative || maxNegative == 0.0 {
+					maxNegative = finalMatrix[i][j]
+				}
+			}
+		}
+	}
+	if negativeCount > 0 {
+		fmt.Printf("DEBUG NEGATIVE VALUES: Found %d negative values ranging from %.2f to %.2f\n", negativeCount, minNegative, maxNegative)
+		fmt.Printf("  This indicates mathematical issues in interpolation that need fixing\n")
+	}
+
+	// DEBUG: Print detailed matrix information
+	fmt.Printf("DEBUG FINAL RESULT:\n")
+	fmt.Printf("  Name: %s\n", name)
+	fmt.Printf("  Labels: %v\n", labels)
+	fmt.Printf("  Matrix dimensions: %dx%d\n", len(finalMatrix), len(finalMatrix[0]))
+	fmt.Printf("  DateRange: %d entries from %s to %s\n", len(dateRange), dateRange[0].Format("2006-01-02"), dateRange[len(dateRange)-1].Format("2006-01-02"))
+	for i, label := range labels {
+		nonZeroCount := 0
+		negCount := 0
+		sum := 0.0
+		minVal, maxVal := finalMatrix[i][0], finalMatrix[i][0]
+		for j := range finalMatrix[i] {
+			if finalMatrix[i][j] > 0 {
+				nonZeroCount++
+				sum += finalMatrix[i][j]
+			}
+			if finalMatrix[i][j] < 0 {
+				negCount++
+			}
+			if finalMatrix[i][j] < minVal { minVal = finalMatrix[i][j] }
+			if finalMatrix[i][j] > maxVal { maxVal = finalMatrix[i][j] }
+		}
+		fmt.Printf("  Layer %d (%s): positives=%d, negatives=%d, sum=%.2f, range=[%.2f to %.2f]\n", 
+			i, label, nonZeroCount, negCount, sum, minVal, maxVal)
+	}
+
 	return &ProcessedBurndown{
 		Name:         name,
 		Matrix:       finalMatrix,
@@ -284,11 +380,14 @@ func resampleBurndownData(daily [][]float64, start, finish time.Time, resample s
 	case "A": // Annual
 		for year := start.Year(); year <= finish.Year(); year++ {
 			yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, start.Location())
-			if yearStart.After(finish) {
-				break
-			}
-			if yearStart.After(start) || yearStart.Equal(start) {
-				dateGranularitySampling = append(dateGranularitySampling, yearStart)
+			yearEnd := time.Date(year+1, 1, 1, 0, 0, 0, 0, start.Location()).Add(-time.Second) // Dec 31 23:59:59
+				
+			// Include year if it OVERLAPS with our data timespan (not just if it starts after)
+			// Year overlaps if: yearStart <= finish AND yearEnd >= start
+			if yearStart.Before(finish) || yearStart.Equal(finish) {
+				if yearEnd.After(start) || yearEnd.Equal(start) {
+					dateGranularitySampling = append(dateGranularitySampling, yearStart)
+				}
 			}
 		}
 	case "M": // Monthly
@@ -316,10 +415,10 @@ func resampleBurndownData(daily [][]float64, start, finish time.Time, resample s
 		return nil, nil, nil, fmt.Errorf("resampling period too loose")
 	}
 
-	// Create daily date range for sampling
-	dateRangeSampling := make([]time.Time, int(finish.Sub(dateGranularitySampling[0]).Hours()/24)+1)
+	// Create daily date range for sampling - start from actual data start, not year start
+	dateRangeSampling := make([]time.Time, int(finish.Sub(start).Hours()/24)+1)
 	for i := range dateRangeSampling {
-		dateRangeSampling[i] = dateGranularitySampling[0].AddDate(0, 0, i)
+		dateRangeSampling[i] = start.AddDate(0, 0, i)
 	}
 
 	// Fill the new resampled matrix
@@ -330,10 +429,28 @@ func resampleBurndownData(daily [][]float64, start, finish time.Time, resample s
 
 	for i, gdt := range dateGranularitySampling {
 		var istart, ifinish int
+		
 		if i > 0 {
-			istart = int(dateGranularitySampling[i-1].Sub(start).Hours() / 24)
+			// For overlapping years, use the end of previous year or data start, whichever is later
+			prevYearEnd := time.Date(dateGranularitySampling[i-1].Year()+1, 1, 1, 0, 0, 0, 0, start.Location())
+			if prevYearEnd.After(start) {
+				istart = int(prevYearEnd.Sub(start).Hours() / 24)
+			} else {
+				istart = 0
+			}
 		}
-		ifinish = int(gdt.Sub(start).Hours() / 24)
+		
+		// For overlapping years, use the end of current year or data finish, whichever is earlier
+		currentYearEnd := time.Date(gdt.Year()+1, 1, 1, 0, 0, 0, 0, start.Location())
+		if currentYearEnd.Before(finish) {
+			ifinish = int(currentYearEnd.Sub(start).Hours() / 24)
+		} else {
+			ifinish = int(finish.Sub(start).Hours() / 24)
+		}
+		
+		fmt.Printf("DEBUG RESAMPLING: Layer %d (year %d)\n", i, gdt.Year())
+		fmt.Printf("  gdt=%s, start=%s\n", gdt.Format("2006-01-02"), start.Format("2006-01-02"))
+		fmt.Printf("  istart=%d, ifinish=%d\n", istart, ifinish)
 
 		var j int
 		for idx, sdt := range dateRangeSampling {
@@ -344,8 +461,15 @@ func resampleBurndownData(daily [][]float64, start, finish time.Time, resample s
 		}
 
 		// Sum the daily matrix data for this resampling period
+		nonZeroDays := 0
 		for k := j; k < len(dateRangeSampling); k++ {
 			sdtDays := int(dateRangeSampling[k].Sub(start).Hours() / 24)
+			
+			// Skip negative days (dates before our start time)
+			if sdtDays < 0 {
+				continue
+			}
+			
 			var sum float64
 			for dailyRow := istart; dailyRow < ifinish && dailyRow < len(daily); dailyRow++ {
 				if sdtDays < len(daily[dailyRow]) {
@@ -353,7 +477,9 @@ func resampleBurndownData(daily [][]float64, start, finish time.Time, resample s
 				}
 			}
 			resampledMatrix[i][k] = sum
+			if sum > 0 { nonZeroDays++ }
 		}
+		fmt.Printf("  Processed %d days, %d with non-zero values\n", len(dateRangeSampling)-j, nonZeroDays)
 	}
 
 	// Generate labels based on resampling mode (matches Python exactly)

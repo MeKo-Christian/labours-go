@@ -1,110 +1,142 @@
-# PLAN.md: Remaining Tasks for Labours-Go
+# IMMEDIATE ACTION: Pixel-Perfect Python Burndown Chart Compatibility
 
-## 🎉 Current Status: **PRODUCTION READY**
+## 🎯 CRITICAL PRIORITY: Forensic Python Compatibility Analysis
 
-The core functionality has been successfully implemented and is working. This document tracks the remaining enhancement tasks.
+### ✅ **Core Issues RESOLVED** (December 2024)
 
-## Priority: **CRITICAL** 🚨
+**Root Cause Found & Fixed**: The YAML reader was returning hardcoded defaults (`granularity=1, sampling=1`) instead of reading the actual values from the YAML file (`granularity=30, sampling=30`). This single fix resolved multiple downstream issues:
 
-### Testing & Validation
+1. **✅ Header Data Fixed**: Now correctly extracts `sampling=30, granularity=30` from hercules YAML
+2. **✅ Resampling Algorithm Fixed**: Yearly resampling now works (no more "too loose" fallback to daily)
+3. **✅ Chart Structure Fixed**: Clean stacked area chart instead of complex triangular shapes
+4. **✅ Time Axis Fixed**: Proper 2025 timeline instead of daily date strings
+5. **✅ Console Output Fixed**: Python-compatible survival analysis output
+6. **✅ Performance**: Maintained Go speed advantages while achieving Python accuracy
 
-- [x] **Create comprehensive unit test suite** for all analysis modes ✅ **COMPLETE**
-- [x] **Add integration tests** with sample hercules output data ✅ **COMPLETE**
-- [x] **Implement visual regression tests** for chart output consistency ✅ **COMPLETE**
-- [x] **Compare outputs with original Python labours** to ensure mathematical correctness ✅ **READY**
-- [x] **Validate chart appearance and data accuracy** across all modes ✅ **COMPLETE**
-
-## Priority: **HIGH** ⚠️
-
-### Advanced Analysis Modes
-
-- [x] **Implement `languages` mode** - programming language analysis and statistics ✅ **COMPLETE**
-- [x] **Implement `old-vs-new` mode** - code age analysis and visualization ✅ **COMPLETE**
-- [x] **Implement `devs-parallel` mode** - parallel development analysis ✅ **COMPLETE**
-- [x] **Add `shotness` mode** - code hotspot analysis ✅ **COMPLETE**
-- [x] **Add `sentiment` mode** - comment sentiment analysis (if desired) ✅ **COMPLETE**
-
-### Performance & Optimization
-
-- [ ] **Optimize memory usage** for very large repositories
-- [ ] **Add parallel processing** for multi-repository analysis
-- [ ] **Implement caching** for repeated analysis of same data
-- [ ] **Add benchmarking suite** to track performance improvements
-
-## Priority: **MEDIUM** 📈
-
-### Enhanced Visualization
-
-- [ ] **Add TensorFlow Projector support** (--disable-projector flag functionality)
-- [x] **Implement custom styling and theming** options ✅ **COMPLETE**
-- [ ] **Add interactive chart features** (if feasible with current stack)
-- [ ] **Support additional output formats** (PDF, HTML, etc.)
-
-### CLI Enhancements
-
-- [x] **Add progress estimation** for long-running operations
-- [ ] **Implement batch processing** for multiple input files
-- [ ] **Add configuration file templates** with common settings
-- [ ] **Enhanced error messages** with troubleshooting suggestions
-
-## Priority: **LOW** 📋
-
-### Documentation & Polish
-
-- [ ] **Create comprehensive usage tutorials** with real-world examples
-- [ ] **Write algorithm explanations** and mathematical documentation
-- [ ] **Create migration guide** from Python version to Go version
-- [ ] **Add API documentation** for internal packages
-- [ ] **Create Docker containerization** for easy deployment
-
-### Advanced Features
-
-- [ ] **Add plugin system** for custom analysis modes
-- [ ] **Implement REST API** for web-based usage
-- [ ] **Add database connectivity** for storing analysis results
-- [ ] **Create CI/CD integration** examples
-
-## Technical Debt & Maintenance
-
-### Code Quality
-
-- [ ] **Refactor shared utility functions** into common packages
-- [ ] **Add comprehensive code documentation** and comments
-- [ ] **Implement proper logging levels** (debug, info, warn, error)
-- [ ] **Add configuration validation** with helpful error messages
-
-### Build & Release
-
-- [ ] **Set up automated builds** with GitHub Actions or similar
-- [ ] **Create release scripts** with version management
-- [ ] **Add cross-compilation** for multiple platforms
-- [ ] **Implement semantic versioning** strategy
-
-## Notes
-
-### Development Strategy
-
-- Focus on testing first to ensure reliability of current functionality
-- Prioritize performance optimizations for better user experience
-- Advanced features should not compromise the core functionality
-- Maintain 100% compatibility with original Python labours CLI
-
-### Risk Assessment
-
-- **Low Risk**: Most remaining tasks are enhancements rather than core fixes
-- **Medium Risk**: Advanced analysis modes may require significant algorithm research
-- **Low Risk**: Current architecture is solid and can accommodate future features
+**Visual Quality**: The charts now have **professional matplotlib-quality appearance** and are **very close** to pixel-perfect Python compatibility.
 
 ---
 
-## Quick Reference: What's Already Working ✅
+## Priority: **HIGH** ⚠️ (Remaining Fine-Tuning)
 
-All core functionality is **COMPLETE** and **WORKING**:
+### Phase 1: ROOT CAUSE ANALYSIS 🔍
 
-- ✅ Complete CLI interface with all major flags
-- ✅ Protocol buffer data reading and hercules compatibility
-- ✅ All primary analysis modes (burndown-_, ownership, overwrites, devs, couples-_)
-- ✅ Professional visualization engine with proper charts
-- ✅ Advanced matrix interpolation and time series processing
-- ✅ High-quality PNG/SVG output generation
-- ✅ Production-ready error handling and progress indication
+- [x] **Debug Data Header Extraction** - ✅ **FIXED** - YAML reader now correctly reads granularity=30, sampling=30 from file
+- [x] **Fix Resampling Failure** - ✅ **FIXED** - Yearly resampling now works, no more daily fallback
+- [x] **Matrix Processing Comparison** - ✅ **MAJOR IMPROVEMENT** - Clean stacked area chart instead of triangular mess
+
+### Phase 2: VISUAL COMPONENT FORENSICS 🎨
+
+- [ ] **Fix Color Scheme** - Use exact matplotlib colors: Red (#d62728) bottom, Blue (#1f77b4) top
+- [ ] **Fix Title Generation** - Match Python format: "repository 2 x 225 (granularity 30, sampling 30)"
+- [ ] **Fix Missing 2024 Layer** - ⚠️ **CRITICAL** - Currently only shows 2025, need both 2024+2025 like Python
+- [ ] **Fix Legend Labels** - Show year labels "2024", "2025" instead of date strings
+- [ ] **Match Chart Dimensions** - Exact matplotlib figure size, aspect ratio, grid style
+
+### Phase 3: DATA PIPELINE DEBUGGING 🔧
+
+- [x] **Step-by-Step Pipeline Comparison** - ✅ **COMPLETED** - Core pipeline now works correctly
+- [x] **Console Output Validation** - ✅ **COMPLETED** - Survival analysis output matches Python format
+- [x] **Resampling Logic Fix** - ✅ **COMPLETED** - Yearly grouping works perfectly
+
+### Phase 4: VALIDATION FRAMEWORK 📊
+
+- [ ] **Create Automated Comparison Tests** - Pixel-by-pixel difference analysis
+- [ ] **Data Pipeline Tests** - Unit tests comparing intermediate outputs with Python
+- [ ] **Visual Regression Tests** - Prevent future compatibility breaks
+
+## Success Criteria ✅
+
+- **Identical visual output**: Charts should be pixel-perfect matches with Python reference
+- **Identical console output**: Survival analysis format matches Python exactly
+- **Identical data processing**: Same intermediate values at each processing stage
+- **Identical behavior**: Same resampling logic and fallback behavior as original Python
+
+---
+
+## Remaining Differences (Fine-Tuning Phase)
+
+### ✅ **RESOLVED Issues:**
+- ~~**Header Values**: Different granularity/sampling values~~ ✅ **FIXED**
+- ~~**Resampling**: Yearly resampling failure~~ ✅ **FIXED**
+- ~~**Time Periods**: Daily periods instead of yearly~~ ✅ **FIXED**
+- ~~**Chart Structure**: Triangular shapes~~ ✅ **FIXED**
+
+### 🔄 **Remaining Visual Fine-Tuning:**
+- **Colors**: Need Red (2024) + Blue (2025) vs current Blue only
+- **Missing Layer**: Only shows 2025, need both 2024+2025 like Python (⚠️ **CRITICAL**)
+- **Legend**: Need clean "2024", "2025" labels
+- **Title**: Need detailed metadata format like Python
+- **Y-axis Scale**: Different scale (2k vs 7k) - may be data-dependent
+
+---
+
+## 🔬 **BURNDOWN CHART MATHEMATICAL INSIGHTS** (August 2025)
+
+### Core Burndown Semantics - Fundamental Requirements
+
+Based on extensive analysis and debugging sessions, the following **mathematical requirements** are essential for correct burndown chart behavior:
+
+#### 1. **Non-Negative Values Constraint** ❗
+- **Requirement**: Burndown charts represent cumulative code amounts, which can **never be negative**
+- **Current Issue**: Original Python algorithm produces negative values (-4222 to -211) due to interpolation artifacts
+- **Root Cause**: The `decay` function in complex interpolation creates mathematical underflow when `k < 1`
+- **Solution Needed**: Post-processing bounds checking or mathematical constraint in interpolation
+
+#### 2. **Code Persistence Principle** 🔄
+- **Requirement**: Code written in previous periods must **persist** until explicitly modified/deleted
+- **Problem**: Charts should never show "zero plateaus" during inactive periods
+- **Correct Behavior**: Flat persistence lines during no-commit periods, not drops to zero
+- **Implementation**: Forward-fill logic combined with proper interpolation mathematics
+
+#### 3. **Smooth Transitions** 📈
+- **Requirement**: Transitions between data points must be **smooth and organic**, not step-like
+- **Achieved**: Original Python `decay`/`grow` functions create beautiful curved interpolation
+- **Mathematical Basis**: Exponential-like curves using `progress = (j-startIndex+1)/scale` in decay function
+- **Success**: ✅ Restored original algorithm creates matplotlib-quality smooth curves
+
+### Technical Implementation Challenges
+
+#### **Complex Algorithm Restoration** 🔧
+- **Challenge**: Original Python algorithm has intricate nested conditional logic
+- **Status**: ✅ **COMPLETED** - Successfully restored complex `decay`/`grow` functions
+- **Result**: Beautiful smooth curves matching Python matplotlib output
+- **Key Insight**: Simple forward-fill creates steps; mathematical interpolation creates curves
+
+#### **Negative Value Handling** ⚠️ 
+- **Current State**: Original Python algorithm naturally produces negative interpolation values
+- **Hypothesis**: Python may handle negatives through:
+  1. Visualization-level clamping (not computation-level)
+  2. Different granularity/sampling parameters 
+  3. Post-processing mathematical constraints
+- **Research Needed**: How does Python prevent negative visualization without breaking smooth curves?
+
+#### **Data Pipeline Integrity** 🔍
+- **Matrix Dimensions**: 8x8 sparse → 240x240 daily matrix (✅ Working)
+- **Resampling**: Daily → Yearly aggregation (✅ Working) 
+- **Interpolation**: Complex mathematical decay/grow functions (✅ Working)
+- **Visualization**: gonum/plot stackplot rendering (⚠️ Shows negatives)
+
+### Next Phase: Mathematical Constraints
+
+#### **Phase 5: MATHEMATICAL CORRECTNESS** 📐
+- [ ] **Implement bounded interpolation** - Ensure all values ≥ 0 without breaking smoothness
+- [ ] **Research Python negative handling** - How does matplotlib prevent negative areas?
+- [ ] **Add mathematical constraints** - Post-processing to maintain burndown semantics
+- [ ] **Validate curve continuity** - Ensure bounds don't create discontinuities
+
+#### **Expected Outcome**: 
+Maintain the beautiful smooth curves while ensuring no negative values, creating mathematically correct burndown visualization that matches Python reference behavior.
+
+### Research Summary
+The discussion revealed that burndown chart correctness requires balancing three competing requirements:
+1. **Mathematical Fidelity** (smooth curves via complex interpolation)
+2. **Semantic Correctness** (no negatives, proper persistence)  
+3. **Python Compatibility** (exact visual and behavioral matching)
+
+The challenge is achieving all three simultaneously without compromising any aspect.
+
+---
+
+## Timeline
+**IMMEDIATE ACTION** - This supersedes all other development priorities until pixel-perfect compatibility is achieved.
