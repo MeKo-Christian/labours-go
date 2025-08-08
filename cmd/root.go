@@ -46,6 +46,25 @@ func initializeFlags() {
 	rootCmd.PersistentFlags().Int("max-people", 20, "Maximum number of developers in overwrites matrix and people plots.")
 	rootCmd.PersistentFlags().Bool("order-ownership-by-time", false, "Sort developers in the ownership plot by their first appearance in the history.")
 	rootCmd.PersistentFlags().Bool("sentiment", false, "Include sentiment analysis in the output (Python compatibility)")
+	rootCmd.PersistentFlags().String("size", "", "Axes' size in inches, e.g., '16,8' (default: 16x8)")
+
+	// Python compatibility flags
+	rootCmd.PersistentFlags().Bool("sentiment", false, "Include sentiment analysis in the output (Python compatibility)")
+
+	// Progress and output control flags
+	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Disable progress bars and reduce output")
+	rootCmd.PersistentFlags().Bool("verbose", false, "Enable verbose output with detailed progress information")
+
+	// Theme-related flags
+	rootCmd.PersistentFlags().String("theme", "default", "Theme to use for visualization (default, dark, minimal, vibrant)")
+	rootCmd.PersistentFlags().Bool("list-themes", false, "List all available themes and exit")
+	rootCmd.PersistentFlags().String("export-theme", "", "Export a built-in theme to file for customization")
+	rootCmd.PersistentFlags().String("load-theme", "", "Load custom theme from file")
+
+	// Hercules integration flags
+	rootCmd.PersistentFlags().String("hercules", "", "Path to hercules binary (empty for auto-detection)")
+	rootCmd.PersistentFlags().String("from-repo", "", "Analyze git repository directly using hercules")
+	rootCmd.PersistentFlags().String("hercules-flags", "", "Additional flags to pass to hercules")
 }
 
 func bindFlagsToViper() {
