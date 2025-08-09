@@ -239,15 +239,16 @@ func plotParallelActivity(metrics ParallelismMetrics, output string) error {
 		p.Legend.Add(fmt.Sprintf("Average (%.1f)", metrics.AverageConcurrency), avgLine)
 	}
 
-	// Save PNG
+	// Save PNG with dynamic sizing
+	width, height := graphics.GetPlotSize(graphics.ChartTypeDefault)
 	outputFile := filepath.Join(output, "parallel_activity.png")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, outputFile); err != nil {
+	if err := p.Save(width, height, outputFile); err != nil {
 		return fmt.Errorf("failed to save parallel activity plot: %v", err)
 	}
 
 	// Save SVG
 	outputFileSVG := filepath.Join(output, "parallel_activity.svg")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, outputFileSVG); err != nil {
+	if err := p.Save(width, height, outputFileSVG); err != nil {
 		return fmt.Errorf("failed to save parallel activity SVG: %v", err)
 	}
 
@@ -300,15 +301,16 @@ func plotDeveloperConcurrency(metrics ParallelismMetrics, output string) error {
 	// Set custom X-axis labels
 	p.NominalX(metrics.ActiveDevelopers...)
 
-	// Save PNG
+	// Save PNG with dynamic sizing
+	width2, height2 := graphics.GetPlotSize(graphics.ChartTypeDefault)
 	outputFile := filepath.Join(output, "developer_concurrency.png")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, outputFile); err != nil {
+	if err := p.Save(width2, height2, outputFile); err != nil {
 		return fmt.Errorf("failed to save developer concurrency plot: %v", err)
 	}
 
 	// Save SVG
 	outputFileSVG := filepath.Join(output, "developer_concurrency.svg")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, outputFileSVG); err != nil {
+	if err := p.Save(width2, height2, outputFileSVG); err != nil {
 		return fmt.Errorf("failed to save developer concurrency SVG: %v", err)
 	}
 

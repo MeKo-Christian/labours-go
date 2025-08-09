@@ -53,6 +53,26 @@ test-integration:
     @echo "🔗 Running integration tests"
     ./scripts/run_tests.sh
 
+# Run visual regression tests
+test-visual:
+    @echo "🎨 Running visual regression tests"
+    go test -v ./test/visual/...
+
+# Run visual framework demo
+test-visual-demo:
+    @echo "🎭 Running visual framework demo"
+    go test -v ./test/visual/ -run TestVisualFrameworkDemo
+
+# Generate reference images for visual testing
+visual-generate-refs:
+    @echo "🖼️  Generating visual reference images"
+    GENERATE_REFERENCES=true go test -v ./test/visual/ -run TestReferenceGeneration
+
+# Test Python compatibility (if reference images exist)
+test-python-compat:
+    @echo "🐍 Testing Python compatibility"
+    go test -v ./test/visual/ -run TestPythonCompatibilityDemo
+
 # === CHART GENERATION ===
 
 # Generate example burndown chart
@@ -68,3 +88,13 @@ test-chart:
     just build
     ./labours-go -i example_data/hercules_burndown.yaml -m burndown-project -o analysis_results/test_chart.png
     @echo "Chart saved as analysis_results/test_chart.png"
+
+# Generate all available charts for comprehensive testing
+generate-all-charts INPUT="example_data/hercules_burndown.yaml" OUTPUT="visual_output":
+    @echo "🎨 Generating complete chart suite"
+    ./scripts/generate_all_charts.sh {{INPUT}} {{OUTPUT}}
+
+# Generate charts quietly (minimal output)
+generate-all-quiet INPUT="example_data/hercules_burndown.yaml" OUTPUT="visual_output":
+    @echo "🤫 Generating charts quietly"
+    QUIET=true ./scripts/generate_all_charts.sh {{INPUT}} {{OUTPUT}}

@@ -7,7 +7,6 @@ import (
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 	"labours-go/internal/graphics"
 	"labours-go/internal/readers"
 )
@@ -171,15 +170,16 @@ func generateOldVsNewPlot(newCodeSeries, modifiedCodeSeries []float64, output st
 	p.Legend.Add("Modified Existing Code", modifiedAreaPlot)
 	p.Legend.Top = true
 
-	// Save the plot
+	// Save the plot with dynamic sizing
+	width, height := graphics.GetPlotSize(graphics.ChartTypeDefault)
 	outputFile := filepath.Join(output, "old_vs_new_analysis.png")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, outputFile); err != nil {
+	if err := p.Save(width, height, outputFile); err != nil {
 		return fmt.Errorf("failed to save old-vs-new plot: %v", err)
 	}
 
 	// Also save as SVG
 	svgOutputFile := filepath.Join(output, "old_vs_new_analysis.svg")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, svgOutputFile); err != nil {
+	if err := p.Save(width, height, svgOutputFile); err != nil {
 		fmt.Printf("Warning: failed to save SVG: %v\n", err)
 	}
 

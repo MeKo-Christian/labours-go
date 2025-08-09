@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 	"labours-go/internal/graphics"
 	"labours-go/internal/progress"
 	"labours-go/internal/readers"
@@ -290,7 +289,8 @@ func plotOwnershipBurndown(names []string, people [][]float64, dateRange []time.
 	}
 
 	// Save the plot
-	if err := p.Save(10*vg.Inch, 5*vg.Inch, output); err != nil {
+	width, height := graphics.GetPlotSize(graphics.ChartTypeCompact)
+	if err := p.Save(width, height, output); err != nil {
 		return fmt.Errorf("failed to save plot: %v", err)
 	}
 

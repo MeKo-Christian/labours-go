@@ -11,6 +11,8 @@ import (
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
 	"labours-go/internal/progress"
+	"path/filepath"
+	"strings"
 )
 
 // PlotStackedBurndown generates a proper stacked area chart for burndown analysis
@@ -76,8 +78,8 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 		}
 	}
 
-	// Color palette for different series - use theme colors
-	colors := generateColorPaletteFromTheme(numSeries)
+	// Color palette for different series - use burndown-specific colors
+	colors := generateBurndownColorPalette(numSeries)
 
 	// Phase 3: Creating plot layers
 	progEstimator.NextOperation("Creating plot layers")
@@ -121,11 +123,10 @@ func PlotStackedBurndown(matrix [][]float64, dateRange []time.Time, output strin
 	// Phase 4: Saving chart
 	progEstimator.NextOperation("Saving chart")
 	
-	width := 12 * vg.Inch
-	height := 8 * vg.Inch
-	if err := p.Save(width, height, output); err != nil {
+	width, height := GetPlotSize(ChartTypeDefault)
+	if err := SavePlotWithFormat(p, width, height, output); err != nil {
 		progEstimator.FinishMultiOperation()
-		return fmt.Errorf("failed to save plot to %s: %v", output, err)
+		return err
 	}
 
 	progEstimator.FinishMultiOperation()
@@ -170,6 +171,12 @@ func addStackedLayer(p *plot.Plot, top, bottom plotter.XYs, fillColor color.Colo
 	}
 
 	return nil
+}
+
+// generateBurndownColorPalette creates colors specifically for burndown charts
+// using matplotlib convention: Red (older/bottom) and Blue (newer/top)
+func generateBurndownColorPalette(n int) []color.Color {
+	return GetBurndownColors(n)
 }
 
 // generateColorPaletteFromTheme creates a set of distinct colors from the current theme
@@ -356,11 +363,44 @@ func PlotBarChart(values []float64, labels []string, output string, title string
 	// Set custom x-axis labels
 	p.NominalX(labels...)
 
-	// Save plot
-	if err := p.Save(10*vg.Inch, 6*vg.Inch, output); err != nil {
-		return fmt.Errorf("failed to save bar chart: %v", err)
+	// Save plot with dynamic sizing
+	width, height := GetPlotSize(ChartTypeCompact)
+	if err := SavePlotWithFormat(p, width, height, output); err != nil {
+		return err
 	}
 
+	return nil
+}
+
+// SavePlotWithFormat saves a plot to file with format detection and validation
+func SavePlotWithFormat(p *plot.Plot, width, height vg.Length, output string) error {
+	// Detect format from file extension
+	ext := strings.ToLower(filepath.Ext(output))
+	
+	// Validate supported formats
+	supportedFormats := []string{".png", ".svg", ".pdf"}
+	isSupported := false
+	for _, supported := range supportedFormats {
+		if ext == supported {
+			isSupported = true
+			break
+		}
+	}
+	
+	if !isSupported && ext != "" {
+		return fmt.Errorf("unsupported output format: %s. Supported formats: PNG, SVG, PDF", ext)
+	}
+	
+	// If no extension, default to PNG
+	if ext == "" {
+		output = output + ".png"
+	}
+	
+	// Save the plot - gonum/plot automatically detects format from extension
+	if err := p.Save(width, height, output); err != nil {
+		return fmt.Errorf("failed to save plot to %s: %v", output, err)
+	}
+	
 	return nil
 }
 

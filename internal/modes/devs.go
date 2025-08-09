@@ -2,13 +2,11 @@ package modes
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 
 	"github.com/spf13/viper"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 	"labours-go/internal/graphics"
 	"labours-go/internal/progress"
 	"labours-go/internal/readers"
@@ -155,11 +153,11 @@ func plotDevs(developerStats []readers.DeveloperStat, devSeries map[string][]flo
 	}
 
 	// Save the plot
-	outputFile := filepath.Join(output, "developer_contributions.png")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, outputFile); err != nil {
-		return fmt.Errorf("failed to save plot: %v", err)
+	width, height := graphics.GetPlotSize(graphics.ChartTypeDefault)
+	if err := graphics.SavePlotWithFormat(p, width, height, output); err != nil {
+		return err
 	}
 
-	fmt.Printf("Saved developer plot to %s\n", outputFile)
+	fmt.Printf("Saved developer plot to %s\n", output)
 	return nil
 }

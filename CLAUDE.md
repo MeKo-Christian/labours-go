@@ -89,8 +89,9 @@ rm labours-go
 - `overwrites-matrix`: Developer overwrite patterns ✅ **WORKING**
 - `devs`: Developer statistics and metrics ✅ **WORKING**
 - `couples-files`: File coupling analysis ✅ **IMPLEMENTED**
-- `couples-people`: Developer coupling analysis ✅ **IMPLEMENTED**
+- `couples-people`: Developer coupling analysis ✅ **FULLY COMPATIBLE** (100% Python-compatible embeddings)
 - `couples-shotness`: Shotness-based coupling ✅ **IMPLEMENTED**
+- `shotness`: Code hotspot analysis (most frequently modified structural units) ✅ **IMPLEMENTED**
 - `old-vs-new`: Code age analysis (new vs modified code evolution) ✅ **IMPLEMENTED**
 
 ### Input Formats
@@ -362,7 +363,7 @@ if err != nil || len(primaryData) == 0 {
 #### Social Analysis (Developer-focused):
 - `devs*`: Developer statistics and behavior
 - `ownership`: Code ownership patterns
-- `couples-people`: Developer collaboration patterns
+- `couples-people`: Developer collaboration patterns ✅ **PYTHON-COMPATIBLE EMBEDDINGS**
 
 #### Structural Analysis (Code-focused):
 - `couples-files`: File coupling and dependencies
@@ -373,7 +374,7 @@ if err != nil || len(primaryData) == 0 {
 
 Based on PLAN.md status, focus on:
 1. **devs-parallel**: Parallel development analysis (next high priority item)
-2. **shotness**: Code hotspot analysis
+2. ~~**shotness**: Code hotspot analysis~~ ✅ **COMPLETED**
 3. **Performance optimization**: Memory usage for large repositories
 4. **Enhanced visualizations**: Interactive features and additional output formats
 

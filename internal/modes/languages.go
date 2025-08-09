@@ -2,7 +2,6 @@ package modes
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 
 	"gonum.org/v1/plot"
@@ -79,19 +78,13 @@ func plotLanguages(languageStats []readers.LanguageStat, output string) error {
 		p.X.Tick.Label.YAlign = -0.5
 	}
 
-	// Save the plot
-	outputFile := filepath.Join(output, "languages.png")
-	if err := p.Save(12*vg.Inch, 8*vg.Inch, outputFile); err != nil {
-		return fmt.Errorf("failed to save language plot: %v", err)
+	// Save the plot with dynamic sizing
+	width, height := graphics.GetPlotSize(graphics.ChartTypeDefault)
+	if err := graphics.SavePlotWithFormat(p, width, height, output); err != nil {
+		return err
 	}
 
-	// Also create an SVG version
-	svgFile := filepath.Join(output, "languages.svg")
-	if err := p.Save(12*vg.Inch, 8*vg.Inch, svgFile); err != nil {
-		return fmt.Errorf("failed to save language SVG: %v", err)
-	}
-
-	fmt.Printf("Language charts saved to %s and %s\n", outputFile, svgFile)
+	fmt.Printf("Language chart saved to %s\n", output)
 	
 	// Print text summary
 	fmt.Println("\nLanguage Statistics:")

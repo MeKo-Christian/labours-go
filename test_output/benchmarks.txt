@@ -1,7 +1,0 @@
-PASS
-ok  	labours-go/internal/graphics	0.003s
-PASS
-ok  	labours-go/internal/modes	0.004s
-?   	labours-go/internal/pb	[no test files]
-PASS
-ok  	labours-go/internal/readers	0.002s

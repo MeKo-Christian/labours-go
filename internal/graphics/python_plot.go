@@ -6,7 +6,6 @@ import (
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 	"labours-go/internal/burndown"
 )
 
@@ -17,7 +16,9 @@ func PlotBurndownPythonStyle(data *burndown.ProcessedBurndown, output string, re
 	}
 
 	p := plot.New()
-	p.Title.Text = "Burndown Chart"
+	// Generate Python-compatible title: "repository 2 x 225 (granularity 30, sampling 30)"
+	p.Title.Text = fmt.Sprintf("%s %d x %d (granularity %d, sampling %d)", 
+		data.Name, len(data.Matrix), len(data.DateRange), data.Granularity, data.Sampling)
 	p.X.Label.Text = "Time" 
 	p.Y.Label.Text = "Lines of code"
 	if relative {
@@ -126,11 +127,10 @@ func PlotBurndownPythonStyle(data *burndown.ProcessedBurndown, output string, re
 	}
 	_ = legendLoc // TODO: Implement legend positioning
 
-	// Save plot with Python-compatible dimensions
-	width := 12 * vg.Inch  // Python's typical figure size
-	height := 8 * vg.Inch
-	if err := p.Save(width, height, output); err != nil {
-		return fmt.Errorf("failed to save plot to %s: %v", output, err)
+	// Save plot with dynamic sizing (respects --size flag)
+	width, height := GetPlotSize(ChartTypeDefault)
+	if err := SavePlotWithFormat(p, width, height, output); err != nil {
+		return err
 	}
 
 	return nil

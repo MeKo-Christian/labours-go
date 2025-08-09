@@ -24,28 +24,39 @@ type ShotnessResult struct {
 	LastHit         int32   // Last time period with modifications
 }
 
-// Shotness generates code hotspot analysis and visualization showing which structural
+// Shotness generates code hotspot analysis showing which structural
 // units (functions, classes, etc.) have been modified most frequently.
+// Provides both text-based statistics (primary) and visualization (optional).
 func Shotness(reader readers.Reader, output string) error {
 	// Step 1: Read shotness records
 	records, err := reader.GetShotnessRecords()
 	if err != nil {
-		return fmt.Errorf("failed to get shotness records: %v - ensure the input data contains shotness analysis results", err)
+		fmt.Printf("Warning: No shotness data available - %v\n", err)
+		fmt.Println("To generate shotness analysis, run hercules with the --shotness flag:")
+		fmt.Println("  hercules --burndown --shotness <repo> | labours -m shotness")
+		return nil
 	}
 
 	if len(records) == 0 {
-		return fmt.Errorf("no shotness records found in the data - the input file may not contain shotness analysis results")
+		fmt.Println("No shotness records found in the data.")
+		fmt.Println("To generate shotness analysis, run hercules with the --shotness flag:")
+		fmt.Println("  hercules --burndown --shotness <repo> | labours -m shotness")
+		return nil
 	}
 
 	// Step 2: Process and aggregate shotness data
 	results := processShotnessRecords(records)
 
-	// Step 3: Generate visualization
-	if err := plotShotness(results, output); err != nil {
-		return fmt.Errorf("failed to generate shotness plot: %v", err)
+	// Step 3: Print Python-compatible text statistics (primary output)
+	printShotnessStats(results)
+
+	// Step 4: Generate visualization (optional - only if output directory specified)
+	if output != "" {
+		if err := plotShotness(results, output); err != nil {
+			fmt.Printf("Warning: Failed to generate shotness plot: %v\n", err)
+		}
 	}
 
-	fmt.Printf("Shotness analysis completed. Analyzed %d structural units.\n", len(results))
 	return nil
 }
 
@@ -156,15 +167,16 @@ func plotShotness(results []ShotnessResult, output string) error {
 	p.X.Tick.Label.XAlign = -0.5
 	p.X.Tick.Label.YAlign = -0.5
 	
-	// Save the plot
+	// Save the plot with dynamic sizing
+	width, height := graphics.GetPlotSize(graphics.ChartTypeWide)
 	outputFile := filepath.Join(output, "shotness.png")
-	if err := p.Save(16*vg.Inch, 10*vg.Inch, outputFile); err != nil {
+	if err := p.Save(width, height, outputFile); err != nil {
 		return fmt.Errorf("failed to save shotness plot: %v", err)
 	}
 	
 	// Also create an SVG version
 	svgFile := filepath.Join(output, "shotness.svg")
-	if err := p.Save(16*vg.Inch, 10*vg.Inch, svgFile); err != nil {
+	if err := p.Save(width, height, svgFile); err != nil {
 		return fmt.Errorf("failed to save shotness SVG: %v", err)
 	}
 	
@@ -174,6 +186,29 @@ func plotShotness(results []ShotnessResult, output string) error {
 	printShotnessSummary(results)
 	
 	return nil
+}
+
+// printShotnessStats prints shotness statistics in Python-compatible format
+// Matches the format from Python's show_shotness_stats function:
+// "%8d  %s:%s [%s]" % (count, r.file, r.name, r.internal_role)
+func printShotnessStats(results []ShotnessResult) {
+	fmt.Println("Shotness Analysis - Code Hotspots:")
+	
+	if len(results) == 0 {
+		fmt.Println("No hotspots found.")
+		return
+	}
+
+	// Print in Python-compatible format: count  file:name [type]
+	for _, result := range results {
+		fmt.Printf("%8d  %s:%s [%s]\n", 
+			result.TotalHits, 
+			result.File, 
+			result.Name, 
+			result.Type)
+	}
+	
+	fmt.Printf("\nTotal: %d hotspots analyzed\n", len(results))
 }
 
 // printShotnessSummary prints a detailed text summary of the shotness analysis

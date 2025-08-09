@@ -133,6 +133,52 @@ func isGitRepository(path string) bool {
 	return info.IsDir()
 }
 
+// detectOutputFormat determines the output format from file extension or backend flag
+func detectOutputFormat(outputPath string) string {
+	// Check if backend flag overrides format detection
+	if backend := viper.GetString("backend"); backend != "" {
+		switch strings.ToLower(backend) {
+		case "pdf":
+			return "pdf"
+		case "png":
+			return "png"
+		case "svg":
+			return "svg"
+		case "auto":
+			// Fall through to extension detection
+		default:
+			// For unknown backends, fall through to extension detection
+		}
+	}
+	
+	// Detect from file extension
+	ext := strings.ToLower(filepath.Ext(outputPath))
+	switch ext {
+	case ".pdf":
+		return "pdf"
+	case ".svg":
+		return "svg"
+	case ".png", "":
+		return "png" // Default to PNG
+	default:
+		return "png" // Default to PNG for unknown extensions
+	}
+}
+
+// generateOutputPath generates the output path with the appropriate file extension
+func generateOutputPath(basePath string, format string) string {
+	ext := "." + format
+	
+	// If basePath already has the correct extension, use it as-is
+	if strings.HasSuffix(strings.ToLower(basePath), ext) {
+		return basePath
+	}
+	
+	// Remove any existing extension and add the correct one
+	nameWithoutExt := strings.TrimSuffix(basePath, filepath.Ext(basePath))
+	return nameWithoutExt + ext
+}
+
 // mapModesToHerculesAnalyses maps labours-go modes to hercules analysis types
 func mapModesToHerculesAnalyses(modes []string) []string {
 	analysisMap := make(map[string]bool)
@@ -225,14 +271,24 @@ func runHerculesAndVisualize(herculesPath, repoPath, analysis string) error {
 	// Run visualization for each mode
 	for _, mode := range laboursGoModes {
 		outputPath := viper.GetString("output")
+		var format string
+		
 		if outputPath == "" {
 			// Default to centralized analysis_results directory
 			os.MkdirAll("analysis_results", 0755)
-			outputPath = fmt.Sprintf("analysis_results/%s_%s.png", analysis, mode)
+			format = detectOutputFormat("") // Will use backend flag or default to PNG
+			basePath := fmt.Sprintf("analysis_results/%s_%s", analysis, mode)
+			outputPath = generateOutputPath(basePath, format)
 		} else {
 			// If output is a directory, create filename
 			if info, err := os.Stat(outputPath); err == nil && info.IsDir() {
-				outputPath = filepath.Join(outputPath, fmt.Sprintf("%s_%s.png", analysis, mode))
+				format = detectOutputFormat("") // Will use backend flag or default to PNG
+				basePath := filepath.Join(outputPath, fmt.Sprintf("%s_%s", analysis, mode))
+				outputPath = generateOutputPath(basePath, format)
+			} else {
+				// outputPath is a file, detect format from it
+				format = detectOutputFormat(outputPath)
+				outputPath = generateOutputPath(outputPath, format)
 			}
 		}
 		

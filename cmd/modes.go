@@ -108,7 +108,11 @@ func executeModes(modes []string, reader readers.Reader, output string, startTim
 				}
 				
 				if modeFunc, ok := modeHandlers[mode]; ok {
-					if err := modeFunc(reader, output, startTime, endTime); err != nil {
+					// Apply format detection and generate appropriate output path
+					format := detectOutputFormat(output)
+					formattedOutput := generateOutputPath(output, format)
+					
+					if err := modeFunc(reader, formattedOutput, startTime, endTime); err != nil {
 						fmt.Printf("Error in mode %s: %v\n", mode, err)
 					}
 				} else {
@@ -125,7 +129,11 @@ func executeModes(modes []string, reader readers.Reader, output string, startTim
 				}
 				
 				if modeFunc, ok := modeHandlers[mode]; ok {
-					if err := modeFunc(reader, output, startTime, endTime); err != nil {
+					// Apply format detection and generate appropriate output path
+					format := detectOutputFormat(output)
+					formattedOutput := generateOutputPath(output, format)
+					
+					if err := modeFunc(reader, formattedOutput, startTime, endTime); err != nil {
 						fmt.Printf("Error in mode %s: %v\n", mode, err)
 					}
 				} else {

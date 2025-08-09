@@ -103,6 +103,30 @@ go build -o labours-go
 - `--start-date / --end-date`: Date range filtering
 - `--input-format`: Force input format (auto/pb/yaml)
 
+## Integration with Hercules
+
+Labours-go works as part of a two-stage pipeline with [Hercules](https://github.com/src-d/hercules):
+
+```
+Git Repository → [Hercules Analysis] → Data Files (.yaml/.pb) → [Labours-go Visualization] → Charts & Images
+```
+
+### Quick Integration Example
+
+1. **Analyze repository with Hercules**:
+   ```bash
+   # Generate burndown data
+   hercules --burndown --pb /path/to/repository > analysis.pb
+   
+   # Or generate YAML format
+   hercules --burndown /path/to/repository > analysis.yaml
+   ```
+
+2. **Generate visualizations with Labours-go**:
+   ```bash
+   ./labours-go -m burndown-project -i analysis.pb -o charts/
+   ```
+
 ## Technical Architecture
 
 ### Data Flow
@@ -202,3 +226,18 @@ The CI pipeline automatically runs:
 - Comprehensive linting with golangci-lint
 - Unit and integration tests
 - Benchmark validation
+
+## Future Work
+
+While the project is production-ready with all core functionality implemented, potential future enhancements include:
+
+- **Performance Optimization**: Further memory usage improvements for analyzing very large repositories (>1GB git history)
+- **Interactive Visualizations**: Web-based dashboard with interactive charts and filtering capabilities
+- **Advanced Analysis Modes**: 
+  - `devs-parallel`: Enhanced parallel development pattern analysis
+  - Advanced developer collaboration metrics
+  - Code quality trend analysis
+- **Additional Output Formats**: HTML reports, interactive SVG, and integration with popular BI tools
+- **Plugin Architecture**: Extensible system for custom analysis modes and visualization themes
+
+The codebase architecture is designed to easily accommodate these enhancements while maintaining backward compatibility and performance.

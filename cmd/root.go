@@ -53,10 +53,11 @@ func initializeFlags() {
 	rootCmd.PersistentFlags().Bool("verbose", false, "Enable verbose output with detailed progress information")
 
 	// Theme-related flags
-	rootCmd.PersistentFlags().String("theme", "default", "Theme to use for visualization (default, dark, minimal, vibrant)")
+	rootCmd.PersistentFlags().String("theme", "default", "Theme to use for visualization (default, dark, minimal, vibrant, matplotlib)")
 	rootCmd.PersistentFlags().Bool("list-themes", false, "List all available themes and exit")
 	rootCmd.PersistentFlags().String("export-theme", "", "Export a built-in theme to file for customization")
 	rootCmd.PersistentFlags().String("load-theme", "", "Load custom theme from file")
+	rootCmd.PersistentFlags().Bool("matplotlib-colors", false, "Force matplotlib color scheme for burndown charts (Red #d62728 bottom, Blue #1f77b4 top)")
 
 	// Hercules integration flags
 	rootCmd.PersistentFlags().String("hercules", "", "Path to hercules binary (empty for auto-detection)")
@@ -128,6 +129,17 @@ func runLaboursCommand(cmd *cobra.Command, args []string) {
 		fmt.Printf("Failed to set theme '%s': %v\n", themeName, err)
 		fmt.Printf("Available themes: %v\n", graphics.ListThemes())
 		os.Exit(1)
+	}
+
+	// Handle matplotlib colors flag - force matplotlib theme if requested
+	if viper.GetBool("matplotlib-colors") {
+		if err := graphics.SetTheme("matplotlib"); err != nil {
+			fmt.Printf("Failed to set matplotlib theme: %v\n", err)
+			os.Exit(1)
+		}
+		if !viper.GetBool("quiet") {
+			fmt.Printf("Using matplotlib color scheme (Red #d62728 bottom, Blue #1f77b4 top)\n")
+		}
 	}
 
 	// Handle hercules integration if --from-repo is specified

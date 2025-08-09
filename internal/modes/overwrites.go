@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"gonum.org/v1/plot"
-	"gonum.org/v1/plot/vg"
 	"labours-go/internal/graphics"
 	"labours-go/internal/readers"
 )
@@ -114,7 +113,8 @@ func plotOverwritesMatrix(people []string, matrix [][]float64, output string) er
 	p.Add(heatmap)
 
 	// Save the plot
-	if err := p.Save(10*vg.Inch, 10*vg.Inch, output); err != nil {
+	width, height := graphics.GetPlotSize(graphics.ChartTypeSquare)
+	if err := p.Save(width, height, output); err != nil {
 		return fmt.Errorf("failed to save plot: %v", err)
 	}
 	return nil

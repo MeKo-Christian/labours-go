@@ -214,7 +214,8 @@ func plotCouplingHeatmap(analysis FileCouplingAnalysis, output string) error {
 	
 	// Save the plot
 	outputFile := filepath.Join(output, "file_coupling_heatmap.png")
-	if err := p.Save(12*vg.Inch, 12*vg.Inch, outputFile); err != nil {
+	widthHeat, heightHeat := graphics.GetPlotSize(graphics.ChartTypeSquare)
+	if err := p.Save(widthHeat, heightHeat, outputFile); err != nil {
 		return fmt.Errorf("failed to save heatmap: %v", err)
 	}
 	
@@ -275,7 +276,8 @@ func plotTopCouplingPairs(analysis FileCouplingAnalysis, output string) error {
 	
 	// Save the plot
 	outputFile := filepath.Join(output, "top_file_coupling_pairs.png")
-	if err := p.Save(16*vg.Inch, 8*vg.Inch, outputFile); err != nil {
+	widthBar, heightBar := graphics.GetPlotSize(graphics.ChartTypeDefault)
+	if err := p.Save(widthBar, heightBar, outputFile); err != nil {
 		return fmt.Errorf("failed to save coupling pairs plot: %v", err)
 	}
 	

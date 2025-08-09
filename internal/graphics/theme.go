@@ -236,14 +236,58 @@ var (
 			UseMidPoint: true,
 		},
 	}
+
+	MatplotlibTheme = Theme{
+		Name: "matplotlib",
+		ColorPalette: []ColorRGB{
+			{R: 31, G: 119, B: 180, A: 255},  // Blue (C0) - matplotlib default
+			{R: 255, G: 127, B: 14, A: 255},  // Orange (C1) 
+			{R: 44, G: 160, B: 44, A: 255},   // Green (C2)
+			{R: 214, G: 39, B: 40, A: 255},   // Red (C3)
+			{R: 148, G: 103, B: 189, A: 255}, // Purple (C4)
+			{R: 140, G: 86, B: 75, A: 255},   // Brown (C5)
+			{R: 227, G: 119, B: 194, A: 255}, // Pink (C6)
+			{R: 127, G: 127, B: 127, A: 255}, // Gray (C7)
+			{R: 188, G: 189, B: 34, A: 255},  // Olive (C8)
+			{R: 23, G: 190, B: 207, A: 255},  // Cyan (C9)
+		},
+		Background: ColorRGB{R: 255, G: 255, B: 255, A: 255}, // White
+		Grid: GridStyle{
+			Show:  true,
+			Color: ColorRGB{R: 224, G: 224, B: 224, A: 255},
+			Width: 0.5,
+		},
+		Text: TextStyle{
+			Font:      "Arial",
+			Size:      10,
+			Color:     ColorRGB{R: 0, G: 0, B: 0, A: 255},
+			TitleSize: 14,
+			LabelSize: 10,
+		},
+		Chart: ChartStyle{
+			LineWidth:    1.0,
+			BorderWidth:  1.0,
+			BorderColor:  ColorRGB{R: 0, G: 0, B: 0, A: 255},
+			FillOpacity:  0.7,
+			LegendShow:   true,
+			LegendPos:    "right",
+		},
+		HeatMap: HeatStyle{
+			ColdColor:   ColorRGB{R: 31, G: 119, B: 180, A: 255},  // Blue
+			HotColor:    ColorRGB{R: 214, G: 39, B: 40, A: 255},   // Red
+			MidColor:    ColorRGB{R: 148, G: 103, B: 189, A: 255}, // Purple
+			UseMidPoint: false,
+		},
+	}
 )
 
 // BuiltinThemes contains all built-in themes
 var BuiltinThemes = map[string]Theme{
-	"default": DefaultTheme,
-	"dark":    DarkTheme,
-	"minimal": MinimalTheme,
-	"vibrant": VibranthColorTheme,
+	"default":   DefaultTheme,
+	"dark":      DarkTheme,
+	"minimal":   MinimalTheme,
+	"vibrant":   VibranthColorTheme,
+	"matplotlib": MatplotlibTheme,
 }
 
 // GetColorPalette returns the color palette as color.Color slice
